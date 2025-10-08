@@ -16,7 +16,7 @@ l1 = DHLink(d=0, a=1, alpha=0, qlim=[-pi, pi])
 l2 = DHLink(d=0, a=1, alpha=0, qlim=[-pi, pi])
 l3 = DHLink(d=0, a=1, alpha=0, qlim=[-pi, pi])
 robot = DHRobot([l1, l2, l3], name='my_robot')
-robot.q = [-pi/2, 0, 0]   # Define initial joint state for robot
+robot.q = [-pi/2, 0, 0]   # Initial joint state for robot
 
 # Creating simple cylindrical geometry for each link of the DHRobot (but this time all links will be blue)
 cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.05, color="#3478f6")
