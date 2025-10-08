@@ -32,7 +32,7 @@ from math import pi
 
 point_freq = 1    
 
-# 1.1) Make a 6DOF planar arm model for CRB15000
+# Make a 6DOF planar arm model for CRB15000
 l1 = DHLink(d=0.4, a=0, alpha=-pi/2, qlim=[-pi, pi])
 l2 = DHLink(d=-0.0863, a=-0.707, alpha=pi, qlim=[-pi, pi])
 l3 = DHLink(d=-0.0863, a=-0.110, alpha=-pi/2, qlim=[-pi, pi])
