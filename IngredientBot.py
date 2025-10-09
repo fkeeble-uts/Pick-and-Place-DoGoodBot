@@ -7,10 +7,10 @@ import os
 import logging
 from math import pi
 
-# log config
+# Log config
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
-# robot class
+# Robot class
 class IngredientBot(DHRobot3D):
     def __init__(self):
         links = self._create_DH()
@@ -29,7 +29,7 @@ class IngredientBot(DHRobot3D):
                             spb.transl(0.0061, -0.00008, 0.0137) @ spb.trotx(-pi/2),
                             spb.transl(0.01405, -0.0001, 0.0151) @ spb.rpy2tr(0, 0, -pi/2, order='xyz'),
                             spb.transl(0.014, -0.0001, 0.0012) @ spb.rpy2tr(0, 0, -pi/2, order='xyz'),
-                            spb.transl(0.1, 0, 0) @ spb.rpy2tr(0, 0, -pi/2, order='xyz'),
+                            spb.transl(0.0139, -0.0001, -0.00463) @ spb.rpy2tr(0, 0, -pi/2, order='xyz'),
                             spb.transl(0, 0, 0) @ spb.rpy2tr(0, pi/2, -pi/2, order='xyz'),
                             spb.transl(0, 0, 0) @ spb.rpy2tr(0, pi/2, -pi/2, order='xyz'),
                             spb.transl(0, 0, 0) @ spb.rpy2tr(0, pi/2, -pi/2, order='xyz')]
@@ -46,15 +46,25 @@ class IngredientBot(DHRobot3D):
             qtest_transforms=qtest_transforms
         )
 
-        # scale the model to convert m to mm
-        link_scale = 0.0001
+        # Scale all visuals
+        link_scale = 0.0001  # adjust as needed
+        try:
+            visuals = []
+            for attr_name in ["_link3d", "links_3d", "link_3d", "_links_3d"]:
+                if hasattr(self, attr_name):
+                    attr_value = getattr(self, attr_name)
+                    if isinstance(attr_value, dict):
+                        visuals = list(attr_value.values())
+                    elif isinstance(attr_value, list):
+                        visuals = attr_value
 
-        for visual in self.links_3d:
-            if hasattr(visual, "scale"):
-                visual.scale = [link_scale] * 3
+            for visual in visuals:
+                if hasattr(visual, "scale"):
+                    visual.scale = [link_scale] * 3
+        except Exception as e:
+            logging.warning(f"Could not scale visuals: {e}")
 
-
-        # base orientation
+        # Base orientation
         self.base = self.base * SE3.Rx(pi/2) * SE3.Ry(pi/2)
         self.q = qtest
 
@@ -69,16 +79,16 @@ class IngredientBot(DHRobot3D):
         return links
 
 if __name__ == "__main__":
-    # launch swift and add robot
+    # Launch Swift and add robot
     env = swift.Swift()
     env.launch(realtime=True)
 
     robot_arm = IngredientBot()
     robot_arm.add_to_env(env)
 
-    # set camera view
+    # Set a reasonable camera view
     env.set_camera_pose([1.5, 1.5, 1.0], [0, 0, 0])
 
-    # keep the simulation running
+    # Keep the simulation running
     while True:
         env.step(0.02)
