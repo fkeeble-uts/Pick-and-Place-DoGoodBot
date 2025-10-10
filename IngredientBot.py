@@ -30,7 +30,7 @@ class IngredientBot(DHRobot3D):
                             spb.transl(0.3895, 0.048, 1.161),
                             spb.transl(0.8, 0.0143, 1.161),
                             spb.transl(0.996, 0.056, 1.242),
-                            spb.transl(0.996, 0.056, 1.242)]
+                            spb.transl(0.996, 0.056, 1.242)] @ spb.transl(-0.14385, -0.102, 0)
 
         current_path = os.path.abspath(os.path.dirname(__file__))
 
