@@ -1,7 +1,6 @@
-"# Pick-and-Place-DoGoodBot" 
+# Pick-and-Place-DoGoodBot
 
-Instructions to make Git Commits are as follows 
-
+# Instructions to make Git Commits
 1. Clone Repository with link on github
 2. Configure your identity using:
 git config --global user.email "<your-github-email>"
@@ -20,8 +19,4 @@ git push origin main
 
 
 
-
-
-
-
-Pick and Place Do Good Bot for Industrial Robotics - UTS
+*Pick and Place Do Good Bot for Industrial Robotics - UTS*
