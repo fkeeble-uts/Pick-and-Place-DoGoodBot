@@ -30,7 +30,7 @@ DISP_Z = 0.25
 DISP_SIZE = [DISP_X, DISP_Y, DISP_Z]
 dispenser_pose_x = 0.6
 dispenser_pose_y = -0.2
-dispenser_pose = SE3(dispenser_pose_x, dispenser_pose_y, DISP_SIZE[2] / 2.0)
+dispenser_pose = SE3(dispenser_pose_x, dispenser_pose_y, DISP_Z/2)
 ice_dispenser = Cuboid(scale=[DISP_X, DISP_Y, DISP_Z], pose=dispenser_pose, color=[0.2, 0.4, 1.0, 1.0])
 env.add(ice_dispenser)
 
@@ -114,51 +114,35 @@ def move_joint_traj(q_start, q_goal, steps=60, carry_mesh=None):
         env.step(0.02)
     return q_goal
 
-# ------------------ Smooth Cartesian place + release (single trajectory) ------------------ #
+# ------------------ Smooth Cartesian place + release (fixed) ------------------ #
 def cartesian_place_and_release_safe(q_current, tcp_orientation_SE3, place_xy, final_z,
                                      lift_after=0.08, wrist_clearance=0.03, final_offset_z=0.015):
-    """
-    Single joint-space trajectory descent for smoother place.
-    """
     T_tcp_now = robot.fkine(q_current)
-    start_pos = T_tcp_now.t
-    tcp_final_z = final_z + GLASS_OFFSET.t[2]
-    start_z = start_pos[2]
-    approach_z = max(start_z, tcp_final_z + wrist_clearance)
+    start_z = T_tcp_now.t[2]
+    approach_z = max(start_z, final_z + wrist_clearance + final_offset_z)
 
-    # Solve IK for start and end of descent
-    T_start = SE3(place_xy[0], place_xy[1], approach_z) * tcp_orientation_SE3
-    T_end = SE3(place_xy[0], place_xy[1], tcp_final_z + wrist_clearance) * tcp_orientation_SE3
-    q_start = solve_ik(T_start, q_current)
-    q_end = solve_ik(T_end, q_start)
-
-    if q_start is not None and q_end is not None:
-        q_now = move_joint_traj(q_start, q_end, steps=50, carry_mesh=wine_glass)
+    # 1) Move above the placement point
+    T_approach = SE3(place_xy[0], place_xy[1], approach_z) * tcp_orientation_SE3
+    q_approach = solve_ik(T_approach, q_current)
+    if q_approach is not None:
+        q_now = move_joint_traj(q_current, q_approach, steps=50, carry_mesh=wine_glass)
     else:
         q_now = q_current
 
-    # Lift TCP slightly above final placement before opening
-    T_final_tcp = SE3(place_xy[0], place_xy[1], tcp_final_z + final_offset_z) * tcp_orientation_SE3
-    sol_final = robot.ikine_LM(T_final_tcp, q0=q_now, mask=[1,1,1,1,1,1], joint_limits=True)
-    if sol_final and sol_final.success:
-        q_now = move_joint_traj(q_now, sol_final.q, steps=10, carry_mesh=wine_glass)
+    # 2) Descend to slightly above the final placement (final_offset_z)
+    T_place = SE3(place_xy[0], place_xy[1], final_z + final_offset_z) * tcp_orientation_SE3
+    q_place = solve_ik(T_place, q_now)
+    if q_place is not None:
+        q_now = move_joint_traj(q_now, q_place, steps=50, carry_mesh=wine_glass)
 
+    # 3) Open gripper to release
     gripper_open(steps=20)
 
-    # Ensure glass fully settles at final z
-    T_final = np.eye(4)
-    T_final[0:3,0:3] = wine_glass.T[0:3,0:3]
-    T_final[0:3,3] = np.array([place_xy[0], place_xy[1], tcp_final_z])
-    wine_glass.T = T_final
-
-    # Lift after release
-    try:
-        T_lift_tcp = SE3(place_xy[0], place_xy[1], tcp_final_z + lift_after) * tcp_orientation_SE3
-        sol_lift = robot.ikine_LM(T_lift_tcp, q0=q_now, mask=[1,1,1,1,1,1], joint_limits=True)
-        if sol_lift and sol_lift.success:
-            q_now = move_joint_traj(q_now, sol_lift.q, steps=30)
-    except Exception:
-        pass
+    # 4) Lift after release
+    T_lift = SE3(place_xy[0], place_xy[1], final_z + lift_after) * tcp_orientation_SE3
+    q_lift = solve_ik(T_lift, q_now)
+    if q_lift is not None:
+        q_now = move_joint_traj(q_now, q_lift, steps=30)
 
     return q_now
 
@@ -220,8 +204,8 @@ q_now = move_joint_traj(q_now, q_back_pick, carry_mesh=wine_glass)
 tcp_orientation = SE3.Ry(np.pi/2)
 q_now = cartesian_place_and_release_safe(
     q_now, tcp_orientation,
-    (glass_posex, glass_posey),
-    final_z=GLASS_HEIGHT / 2.0,
+    (0.15, 0.39),   #Furtherest y position my arm can travel without the glass floating  
+    final_z=0.015,
     lift_after=0.08,
     wrist_clearance=0.03,
     final_offset_z=0.015
