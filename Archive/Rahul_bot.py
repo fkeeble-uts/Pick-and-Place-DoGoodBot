@@ -1,4 +1,3 @@
-<<<<<<< HEAD:Rahul_bot.py
 import time
 import numpy as np
 import swift
