@@ -9,6 +9,7 @@ from math import pi
 from Drinkbot import Drinkbot
 from Ingredientbot import IngredientBot
 from Glassbot import Glassbot
+from Serverbot import Serverbot
 
 # ----------------------------------------------------
 # I. CONSTANTS & CONFIGURATION
@@ -270,9 +271,9 @@ robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
 # Robot 4: Server (placeholder)
-# robot4 = Drinkbot4()
-# robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
-# robot4.add_to_env(env)
+robot4 = Serverbot()
+robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
+robot4.add_to_env(env)
 
 # ----------------------------------------------------
 # VI. OBJECT DEFINITIONS (Glass, Ice Dispenser, etc.)
