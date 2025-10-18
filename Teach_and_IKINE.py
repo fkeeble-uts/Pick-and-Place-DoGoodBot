@@ -434,7 +434,7 @@ robot4.add_to_env(env)
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "Drinkbot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
-    RUN_IKINE = False  # False for sliders, True for IK test
+    RUN_IKINE = True  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "IngredientBot":
@@ -452,11 +452,11 @@ if __name__ == "__main__":
     if RUN_IKINE:
         print(f"Running IKINE test for {ROBOT_TO_LOAD}...")
 
-        target_pose = SE3(0.26, -0.9625, 0.29)
+        target_pose = SE3(-0.9, -0.575, 1.12)
         print(f"Target Pose:\n{np.round(target_pose.A, 4)}\n")
 
         initial_q = robot_arm.q.copy()
-        q_guess = [-74.207, 141.295, -31.751, 9.875, 103.964, -24.255]
+        q_guess = [-185, 85, 3, 4, 93, 0]
         target_q, success = find_ikine(robot_arm, target_pose, initial_q_guess=q_guess, ignore_rotation=True)
 
         if success:

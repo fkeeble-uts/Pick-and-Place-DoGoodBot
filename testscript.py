@@ -64,10 +64,9 @@ table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table
 
 # Table 3 (drinks shelf)
 table3_length = 4.0
-table3_width  = 0.75
-table3_height = 1.5
-table3_offset_from_wall = 0
-table3_center_y = -3 + wall_thickness + table1_offset_from_wall + table3_width / 2
+table3_width  = 0.325
+table3_height = 1.2
+table3_center_y = -1.75 + wall_thickness + table3_width / 2
 
 # Glass table (for cups)
 glass_table_length = 0.4
@@ -107,9 +106,9 @@ wrap_spacing_factor = 0.25                 # fraction of table height between wr
 
 ROBOT_BASE_POSES = {
     "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height + floor_height),
-    "R2_ALCOHOL":   SE3(-1.6, table1_center_y, table1_height + floor_height),
-    "R3_MIXERS":    SE3(0.0, table1_center_y, table1_height + floor_height),
-    "R4_SERVER":    SE3(0.0, table2_center_y, table2_height + floor_height),
+    "R2_ALCOHOL":   SE3(0.0, table1_center_y, table1_height + floor_height),
+    "R3_MIXERS":    SE3(-1.6, table1_center_y, table1_height + floor_height),
+    "R4_SERVER":    SE3(0.2, table2_center_y, table2_height + floor_height),
 }
 
 # ----------------------------------------------------
@@ -120,25 +119,25 @@ env = swift.Swift()
 env.launch(realtime=True)
 
 # --- Floor ---
-floor = Cuboid(scale=[6, 4, 0.02],
+floor = Cuboid(scale=[6, 3.25, 0.02],
                color=[0.25, 0.3, 0.35, 1],
-               pose=SE3(0, -0.5, floor_height))
+               pose=SE3(0, -0.125, floor_height))
 env.add(floor)
 
 # --- Walls ---
 back_wall = Cuboid(scale=[6, wall_thickness, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(0, -2.5, wall_height/2))
+                   pose=SE3(0, -1.75, wall_height/2))
 env.add(back_wall)
 
-left_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
+left_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(-3, -0.5, wall_height/2))
+                   pose=SE3(-3, -0.125, wall_height/2))
 env.add(left_wall)
 
-right_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
+right_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height],
                     color=[0.85, 0.85, 0.9, 1],
-                    pose=SE3(3, -0.5, wall_height/2))
+                    pose=SE3(3, -0.125, wall_height/2))
 env.add(right_wall)
 
 # ----------------------------------------------------
@@ -259,20 +258,20 @@ robot1.add_to_env(env)
 
 
 # Robot 2: Alcohol Pourer
-robot2 = Drinkbot()
+robot2 = IngredientBot()
 robot2.q = robot2.home_q
 robot2.base = ROBOT_BASE_POSES["R2_ALCOHOL"]
 robot2.add_to_env(env)
 
 # Robot 3: Mixer Adder
-robot3 = IngredientBot()
+robot3 = Drinkbot()
 robot3.q = robot3.home_q
 robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
 # Robot 4: Server (placeholder)
 robot4 = Serverbot()
-robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
+robot4.base = ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
 robot4.add_to_env(env)
 
 # ----------------------------------------------------
@@ -319,6 +318,7 @@ drink_color = [0, 0, 0.4, 0.7]  # bright, slightly transparent
 
 drink_count = 9
 drink_gaps = (2 - drink_radius) / drink_count + 0.03
+drink_poses = []
 
 for i in range(drink_count):
     # Create Cylinder standing upright
@@ -329,6 +329,7 @@ for i in range(drink_count):
                               table3_height + drink_height/2))  # no rotation, upright along z
     env.add(drink)
     print("Added drink at location: ", 1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2)
+    drink_poses.append(SE3(1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2))
 
 # ----------------------------------------------------
 # VI. INGREDIENTS TABLE OBJECTS (Chopping Boards + Cubes)
@@ -474,11 +475,20 @@ R1_POSES = {
     "HANDOFF": np.deg2rad(np.array([-180., 92.95, -61.93, 10.91, 0., 0.])),
 }
 
-# R2 (Drinkbot) - Will need to collect these with teach mode later
+# R2 (Drinkbot) 
 R2_POSES = {
     "HOME": robot2.q.copy(),
-    "HANDOFF_PICKUP": robot2.q.copy(),  # Position to receive glass
-    "HANDOFF_PLACE": robot2.q.copy(),    # Position to place glass back
+    "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
+    "PLACE_GLASS": np.deg2rad(np.array([0, 25.495, 174.686, 0, -208, 0]))    # Position to place drink
+}
+
+# R3 (Drinkbot) 
+R3_POSES = {
+    "HOME": robot3.q.copy(),
+    "PICKUP_Yellow": np.deg2rad(np.array([0, 47, 73, -32, 91, 0])),  # Position to pick up Yellow ingredient
+    "PICKUP_GREEN": np.deg2rad(np.array([-20, 47, 65, -30, 89, 0])),   # Position to pick up Green ingredient
+    "PICKUP_BLUE": np.deg2rad(np.array([-34, 53, 65, -30, 89, 0])),  # Position to pick up Blue ingredient
+    "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([0, 0, 0, 0, 0, 0]))    # glass drop off position where i will add ingredients
 }
 
 # ============================================================================
@@ -548,66 +558,25 @@ time.sleep(0.5)
 # ============================================================================
 
 print("\n" + "="*70)
-print(">>> ROBOT 2: RECEIVING GLASS FROM R1 <<<")
+print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
-
-q_now_r2 = R2_POSES["HOME"]
-robot2.q = q_now_r2
-print_pose(robot2, "R2 at HOME")
-time.sleep(0.5)
-
-# Step 1: Move to handoff pickup position
-print("\n[R2] Moving to handoff location to receive glass...")
-# Use IK to reach the handoff position (same world location as R1's TCP)
-T_handoff = robot1.fkine(R1_POSES["HANDOFF"])
-print(f"  Handoff position (world): {np.round(T_handoff.t, 3)}")
-
-# Try to solve IK for R2 to reach handoff position using current R2 pose as guess
-sol = robot2.ikine_LM(T_handoff, q0=q_now_r2, mask=[1,1,1,0,0,0], joint_limits=True)
-if sol.success:
-    q_now_r2 = move_to_q(robot2, sol.q, steps=60, name="Handoff Pickup")
-    print_pose(robot2, "R2 at HANDOFF")
-    time.sleep(0.5)
-    
-    # Step 2: Simulate gripper opening to receive glass
-    print("\n[R2] Opening gripper to receive glass from R1...")
-    time.sleep(0.5)
-    
-    # Step 3: Simulate gripper closing around glass
-    print("\n[R2] Gripper closing around glass...")
-    held_by_r1 = False
-    held_by_r2 = True
-    time.sleep(0.5)
-    
-    # Step 4: Move glass to R2's TCP
-    print("\n[R2] Lifting glass...")
-    T_tcp_r2 = robot2.fkine(q_now_r2)
-    target_glass.T = T_tcp_r2.A
-    
-    # Step 5: Return to home
-    print("\n[R2] Returning to home...")
-    q_now_r2 = move_to_q(robot2, R2_POSES["HOME"], steps=60, name="Home",
-                         carry_object=target_glass)
-    print_pose(robot2, "R2 at HOME with glass")
-    time.sleep(0.5)
-    
-else:
-    print("[R2] ❌ IK failed - could not reach handoff position")
-
-# ============================================================================
-# XIII. SUMMARY
-# ============================================================================
-
-print("\n" + "="*70)
-print(">>> HANDOFF COMPLETE <<<")
-print("="*70)
-print(f"\nGlass transfer status:")
-print(f"  Held by R1: {held_by_r1}")
-print(f"  Held by R2: {held_by_r2}")
-print(f"  Glass position: {np.round(target_glass.T[0:3, 3], 3)}")
 
 time.sleep(1.0)
 
+print("[R2] Moving to drinks shelf...")
+print("Target pose of drink 3:")
+print(drink_poses[3])
+print("Drinkbot pose:")
+print(ROBOT_BASE_POSES["R2_ALCOHOL"])
+print("Relative pose from drinkbot to drink 4:")
+print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
+
+# Step 7: Move to drink 4
+print("\n[R2] Moving to drink 4...")
+q_now_r2 = move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
+                      carry_object=None)
+print_pose(robot1, "R2 at Drink 4")
+time.sleep(0.5)
 
 # --- STEP 4: R2 Picks Up Glass and Pours Alcohol (PLACEHOLDER) ---
 # print("--- R2: Pouring Alcohol ---")
@@ -643,4 +612,3 @@ time.sleep(1.0)
 # ----------------------------------------------------
 
 env.hold()
-
