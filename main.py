@@ -7,7 +7,7 @@ from spatialgeometry import Cylinder, Cuboid, Box
 from math import pi
 
 from Drinkbot import Drinkbot
-from Ingredientbot import IngredientBot
+from IngredientBot import IngredientBot
 from Glassbot import Glassbot
 from Serverbot import Serverbot
 
@@ -571,7 +571,7 @@ print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
 
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
-q_now_r1 = move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
+q_now_r2 = move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
                       carry_object=None)
 print_pose(robot1, "R2 at Drink 4")
 time.sleep(0.5)
