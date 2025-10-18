@@ -21,6 +21,11 @@ TRAJ_STEPS = 60      # Default steps for joint trajectory movement
 # --- Shared Object Dimensions ---
 GLASS_RADIUS = 0.03
 GLASS_HEIGHT = 0.06
+BUTTON_RADIUS = 0.05          # Radius of red button
+BUTTON_HEIGHT = 0.03          # Height of red button
+BUTTON_BASE_LENGTH = 0.12            # Base (cuboid) dimensions
+BUTTON_BASE_WIDTH = 0.12
+BUTTON_BASE_HEIGHT = 0.02
 
 # --- Gripper Visual Dimensions ---
 FINGER_LENGTH = 0.08
@@ -63,9 +68,16 @@ glass_table_height = 1.05
 glass_table_center_x = table1_length/2 + glass_table_length/2 + 0.1  # just left of Table 1
 glass_table_center_y = table1_center_y
 
+# Emergency stop button
+button_center_x = 0.5  # along table length
+button_center_y = table2_center_y + table2_width / 2 - 0.1  # near the front edge
+button_center_z = table2_height + BUTTON_BASE_HEIGHT / 2 -0.01  # sits on table
+
 # LED / glow parameters
 base_color      = [0.1, 0.1, 0.15, 1]     # dark graphite
 top_color       = [0.0, 0.6, 0.8, 1]      # neon cyan
+button_base_color = [0.2, 0.2, 0.2, 1]       # Dark gray
+button_color = [0.8, 0, 0, 1] 
 top_glow_color  = [0.0, 0.8, 1.0, 0.3]    # semi-transparent glow
 led_color       = [0.0, 0.8, 1.0, 0.6]    # bright cyan
 led_height      = 0.05                     # LED thickness
@@ -186,6 +198,24 @@ for t in tables:
                                color=led_color,
                                pose=SE3(cx, cy, wrap_z))
             env.add(wrap_ring)
+
+# --- Emergency stop button ---
+stop_base = Cuboid(
+    scale=[BUTTON_BASE_LENGTH, BUTTON_BASE_WIDTH, BUTTON_BASE_HEIGHT],
+    color=button_base_color,
+    pose=SE3(button_center_x, button_center_y, 
+             button_center_z + BUTTON_BASE_HEIGHT/2)
+)
+env.add(stop_base)
+
+red_button = Cylinder(
+    radius=BUTTON_RADIUS,
+    length=BUTTON_HEIGHT,
+    color=button_color,
+    pose=SE3(button_center_x, button_center_y, 
+             button_center_z + BUTTON_BASE_HEIGHT/2 + BUTTON_HEIGHT/2)
+)
+env.add(red_button)
 
 # ----------------------------------------------------
 # V. ROBOT INSTANTIATION & PLACEMENT
