@@ -238,13 +238,6 @@ stop_base = Cuboid(
 )
 env.add(stop_base)
 
-stop_base = Cuboid(
-    scale=[BUTTON_BASE_LENGTH, BUTTON_BASE_WIDTH, BUTTON_BASE_HEIGHT],
-    color=button_base_color,
-    pose=SE3(0.26, -1.538, 1.3)
-)
-env.add(stop_base)
-
 red_button = Cylinder(
     radius=BUTTON_RADIUS,
     length=BUTTON_HEIGHT,
@@ -486,7 +479,7 @@ R1_POSES = {
 R2_POSES = {
     "HOME": robot2.q.copy(),
     "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
-    "HANDOFF_PLACE": robot2.q.copy(),    # Position to place glass back
+    "PLACE_GLASS": np.deg2rad(np.array([0, 25.495, 174.686, 0, -208, 0]))    # Position to place drink
 }
 
 # ============================================================================
