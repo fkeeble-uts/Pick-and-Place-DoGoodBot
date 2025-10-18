@@ -14,260 +14,178 @@ from Serverbot import Serverbot
 # ----------------------------------------------------
 # I. CONSTANTS & CONFIGURATION
 # ----------------------------------------------------
-
 SIM_STEP_TIME = 0.02
-TRAJ_STEPS = 60
-
 GLASS_RADIUS = 0.03
 GLASS_HEIGHT = 0.06
-
-# Offset used when attaching mesh to TCP (so glass sits under the TCP)
-GLASS_OFFSET = SE3(0, 0, GLASS_HEIGHT/2)
-# Orientation so the glass axis matches the gripper orientation used in Rahul's code
-GLASS_ROT = SE3.Ry(np.pi/2)
+GLASS_OFFSET = SE3(0, 0, GLASS_HEIGHT / 2)
+SIDE_GRASP_ROT = SE3.Ry(np.pi / 2)
 
 # ----------------------------------------------------
-# II. SWIFT OBJECT PARAMETERS
+# II. ENVIRONMENT SETUP
 # ----------------------------------------------------
+env = swift.Swift()
+env.launch(realtime=True)
+
+# Floor and wall
+floor = Cuboid(scale=[6, 3.25, 0.02], color=[0.25, 0.3, 0.35, 1], pose=SE3(0, -0.125, 0.01))
+env.add(floor)
 
 wall_height = 2.5
 wall_thickness = 0.05
-floor_height = 0.01
+back_wall = Cuboid(scale=[6, wall_thickness, wall_height],
+                   color=[0.85, 0.85, 0.9, 1],
+                   pose=SE3(0, -1.75, wall_height / 2))
+env.add(back_wall)
 
+# Tables
+table1_height = 1.0
 table1_length = 4.0
 table1_width = 0.75
-table1_height = 1.0
-table1_offset_from_wall = 0.5
-table1_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table1_width / 2
+table1_center_y = -1.5 + wall_thickness + 0.5 + table1_width / 2
 
+table2_height = 1.0
 table2_length = 1.5
 table2_width = 0.7
-table2_height = 1.0
 table2_spacing = 1.0
 table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table2_width / 2)
 
+glass_table_height = 1.05
 glass_table_length = 0.4
 glass_table_width = 0.7
-glass_table_height = 1.05
-glass_table_center_x = table1_length/2 + glass_table_length/2 + 0.01
+glass_table_center_x = table1_length / 2 + glass_table_length / 2 + 0.01
 glass_table_center_y = table1_center_y
+
+for (L, W, H, C) in [
+    (table1_length, table1_width, table1_height, SE3(0, table1_center_y, 0)),
+    (table2_length, table2_width, table2_height, SE3(0, table2_center_y, 0)),
+    (glass_table_length, glass_table_width, glass_table_height, SE3(glass_table_center_x, glass_table_center_y, 0)),
+]:
+    env.add(Cuboid(scale=[L, W, H - 0.05], color=[0.1, 0.1, 0.15, 1], pose=SE3(C.t[0], C.t[1], (H - 0.05) / 2)))
+    env.add(Cuboid(scale=[L, W, 0.05], color=[0.0, 0.6, 0.8, 1], pose=SE3(C.t[0], C.t[1], H - 0.025)))
 
 # ----------------------------------------------------
 # III. ROBOT BASE POSES
 # ----------------------------------------------------
-
 ROBOT_BASE_POSES = {
-    "R1_ICE_GLASS": SE3(1.8, table1_center_y, table1_height + floor_height),
-    "R2_ALCOHOL": SE3(0.0, table1_center_y, table1_height + floor_height),
-    "R3_MIXERS": SE3(-1.6, table1_center_y, table1_height + floor_height),
-    "R4_SERVER": SE3(0.2, table2_center_y, table2_height + floor_height),
+    "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height),
+    "R2_ALCOHOL": SE3(0.0, table1_center_y, table1_height),
+    "R3_MIXERS": SE3(-1.6, table1_center_y, table1_height),
+    "R4_SERVER": SE3(0.2, table2_center_y, table2_height),
 }
 
 # ----------------------------------------------------
-# IV. ENVIRONMENT SETUP
+# IV. LOAD ROBOTS
 # ----------------------------------------------------
-
-env = swift.Swift()
-env.launch(realtime=True)
-
-floor = Cuboid(scale=[6, 3.25, 0.02], color=[0.25, 0.3, 0.35, 1], pose=SE3(0, -0.125, floor_height))
-env.add(floor)
-
-back_wall = Cuboid(scale=[6, wall_thickness, wall_height], color=[0.85, 0.85, 0.9, 1], pose=SE3(0, -1.75, wall_height/2))
-env.add(back_wall)
-
-left_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height], color=[0.85, 0.85, 0.9, 1], pose=SE3(-3, -0.125, wall_height/2))
-env.add(left_wall)
-
-right_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height], color=[0.85, 0.85, 0.9, 1], pose=SE3(3, -0.125, wall_height/2))
-env.add(right_wall)
-
-# ----------------------------------------------------
-# V. TABLES
-# ----------------------------------------------------
-
-tables = [
-    {"name": "Workstation", "length": table1_length, "width": table1_width, "height": table1_height, "center": SE3(0, table1_center_y, 0)},
-    {"name": "UR3e Table", "length": table2_length, "width": table2_width, "height": table2_height, "center": SE3(0, table2_center_y, 0)},
-    {"name": "Glass Table", "length": glass_table_length, "width": glass_table_width, "height": glass_table_height, "center": SE3(glass_table_center_x, glass_table_center_y, 0)},
-]
-
-for t in tables:
-    cx, cy, cz = t["center"].t
-    h = t["height"]
-    l = t["length"]
-    w = t["width"]
-    base = Cuboid(scale=[l, w, h-0.05], color=[0.1, 0.1, 0.15, 1], pose=SE3(cx, cy, (h-0.05)/2))
-    env.add(base)
-    top = Cuboid(scale=[l, w, 0.05], color=[0.0, 0.6, 0.8, 1], pose=SE3(cx, cy, h - 0.025))
-    env.add(top)
-
-# ----------------------------------------------------
-# VI. ROBOTS
-# ----------------------------------------------------
-
 robot1 = Glassbot()
 robot1.base = ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
+home_q = robot1.q.copy()
 
 robot2 = IngredientBot()
-robot2.q = robot2.home_q
 robot2.base = ROBOT_BASE_POSES["R2_ALCOHOL"]
 robot2.add_to_env(env)
 
 robot3 = Drinkbot()
-robot3.q = robot3.home_q
 robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
 robot4 = Serverbot()
-robot4.base = ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
+robot4.base = ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi / 2) * SE3.Ry(pi / 2)
 robot4.add_to_env(env)
 
 # ----------------------------------------------------
-# VII. GLASS OBJECTS (3x3 grid as original)
+# V. GLASS OBJECTS
 # ----------------------------------------------------
-
 glass_objects = []
 glass_color = [1.0, 0.4, 0.0, 0.7]
 
-width_fractions = [0.1, 0.5, 0.9]
-length_fractions = [0.1, 0.5, 0.9]
-
-for yf in width_fractions:
-    for xf in length_fractions:
-        x_pos = glass_table_center_x - glass_table_length/2 + xf * glass_table_length
-        y_pos = glass_table_center_y - glass_table_width/2 + yf * glass_table_width
+for yf in [0.1, 0.5, 0.9]:
+    for xf in [0.1, 0.5, 0.9]:
+        x_pos = glass_table_center_x - glass_table_length / 2 + xf * glass_table_length
+        y_pos = glass_table_center_y - glass_table_width / 2 + yf * glass_table_width
         z_pos = glass_table_height + GLASS_HEIGHT / 2
-        g = Cylinder(radius=GLASS_RADIUS, length=GLASS_HEIGHT, color=glass_color, pose=SE3(x_pos, y_pos, z_pos))
+        g = Cylinder(radius=GLASS_RADIUS, length=GLASS_HEIGHT,
+                     color=glass_color, pose=SE3(x_pos, y_pos, z_pos))
         env.add(g)
         glass_objects.append(g)
 
-# pick the centre glass (index 4)
-glass_index = 4
-target_glass = glass_objects[glass_index]
+# Find closest glass to Glassbot
+base_pos = ROBOT_BASE_POSES["R1_ICE_GLASS"].t[0:2]
+target_glass = glass_objects[int(np.argmin([np.linalg.norm(g.T[0:2, 3] - base_pos) for g in glass_objects]))]
 
 # ----------------------------------------------------
-# VIII. MOVEMENT HELPERS (IK + safer Cartesian place)
+# VI. HELPER FUNCTIONS
 # ----------------------------------------------------
-
 def wrap_to_near(q_goal, q_ref):
     return q_ref + (q_goal - q_ref + np.pi) % (2 * np.pi) - np.pi
 
-
-def solve_ik(robot, T_target, q0, mask=[1,1,1,0,0,0]):
-    # try to solve with mask first; then fallback to full 6 dof
-    sol = robot.ikine_LM(T_target, q0=q0, mask=mask, joint_limits=True)
-    if sol.success:
-        return sol
-    sol2 = robot.ikine_LM(T_target, q0=q0, mask=[1,1,1,1,1,1], joint_limits=True)
-    return sol2
-
+def solve_ik(robot, T_target, q0):
+    sol = robot.ikine_LM(T_target, q0=q0, mask=[1]*6, joint_limits=True)
+    if not sol.success:
+        print(f"❌ IK failed for target:\n{T_target}")
+        return None
+    return sol.q
 
 def move_joint_traj(robot, q_start, q_goal, steps=60, carry_mesh=None):
     if q_goal is None:
+        print("⚠️ Skipping motion: IK failed.")
         return q_start
     q_goal = wrap_to_near(q_goal, q_start)
     for q in rtb.jtraj(q_start, q_goal, steps).q:
         robot.q = q
-        # update gripper geometry if present
         try:
             robot._update_fingers()
         except Exception:
             pass
         if carry_mesh is not None:
             T_tcp = robot.fkine(q)
-            carry_mesh.T = (T_tcp * GLASS_OFFSET * GLASS_ROT).A
+            carry_mesh.T = (T_tcp * GLASS_OFFSET * SIDE_GRASP_ROT).A
         env.step(SIM_STEP_TIME)
     return q_goal
 
-
-def cartesian_place_and_release(robot, q_current, place_xy, final_z, tcp_orientation=SE3.Ry(np.pi/2),
-                                approach_height=0.15, lift_after=0.08, final_offset_z=0.015):
-    # Move above place
-    T_approach = SE3(place_xy[0], place_xy[1], final_z + approach_height) * tcp_orientation
-    sol_ap = solve_ik(robot, T_approach, q_current)
-    if not sol_ap.success:
-        print("[Glassbot] ❌ IK failed for place approach")
-        return q_current
-    q_now = move_joint_traj(robot, q_current, sol_ap.q, steps=50, carry_mesh=target_glass)
-
-    # Descend to place
-    T_place = SE3(place_xy[0], place_xy[1], final_z + final_offset_z) * tcp_orientation
-    sol_place = solve_ik(robot, T_place, q_now)
-    if not sol_place.success:
-        print("[Glassbot] ❌ IK failed for place descend")
-        return q_now
-    q_now = move_joint_traj(robot, q_now, sol_place.q, steps=50, carry_mesh=target_glass)
-
-    # open gripper (visual)
-    try:
-        robot.gripper_open(steps=20)
-    except Exception:
-        pass
-
-    # detach mesh: keep it at placed transform
-    T_tcp_final = robot.fkine(q_now) * GLASS_OFFSET * GLASS_ROT
-    target_glass.T = T_tcp_final.A
-
-    # lift after release
-    T_lift = SE3(place_xy[0], place_xy[1], final_z + lift_after) * tcp_orientation
-    sol_lift = solve_ik(robot, T_lift, q_now)
-    if sol_lift.success:
-        q_now = move_joint_traj(robot, q_now, sol_lift.q, steps=40)
-    return q_now
-
 # ----------------------------------------------------
-# IX. GLASSBOT PICK-AND-PLACE SEQUENCE (1 glass only)
+# VII. PICK AND PLACE SEQUENCE
 # ----------------------------------------------------
+print("\n>>> Glassbot pick, move in x, and place at x=1.2 <<<\n")
 
-print("\n" + "="*70)
-print(">>> GLASSBOT: PICKING 1 GLASS (IK) <<<")
-print("="*70 + "\n")
-
-# Start from robot's current joint config
-q_now = robot1.q.copy()
+q_now = home_q.copy()
 robot1._update_fingers()
+g_pos = target_glass.T[0:3, 3]
 
-# Pre-grasp: a little offset above the glass
-T_pre_grasp = SE3(target_glass.T[0:3, 3][0], target_glass.T[0:3, 3][1], target_glass.T[0:3, 3][2] + 0.06) * SE3.Ry(np.pi/2)
-sol_pre = solve_ik(robot1, T_pre_grasp, q_now)
-if not sol_pre.success:
-    print("[Glassbot] ❌ IK failed for pre-grasp")
-else:
-    q_now = move_joint_traj(robot1, q_now, sol_pre.q, steps=50)
+# 1. Pre-grasp
+T_pre = SE3(g_pos[0] - 0.08, g_pos[1], g_pos[2] + 0.05) * SIDE_GRASP_ROT
+q_pre = solve_ik(robot1, T_pre, q_now)
+q_now = move_joint_traj(robot1, q_now, q_pre, steps=40)
 
-# Grasp: descend to pickup (z ~ table + small offset)
-T_pick = SE3(target_glass.T[0:3, 3][0], target_glass.T[0:3, 3][1], target_glass.T[0:3, 3][2] + 0.02) * SE3.Ry(np.pi/2)
-sol_pick = solve_ik(robot1, T_pick, q_now)
-if not sol_pick.success:
-    print("[Glassbot] ❌ IK failed for pickup")
-else:
-    q_now = move_joint_traj(robot1, q_now, sol_pick.q, steps=40)
-    # close gripper (visual)
-    try:
-        robot1.gripper_close(steps=20)
-    except Exception:
-        pass
-    # attach glass to TCP
-    T_tcp = robot1.fkine(q_now)
-    target_glass.T = (T_tcp * GLASS_OFFSET * GLASS_ROT).A
+# 2. Pick
+T_pick = SE3(g_pos[0] - 0.015, g_pos[1], g_pos[2]) * SIDE_GRASP_ROT
+q_pick = solve_ik(robot1, T_pick, q_now)
+q_now = move_joint_traj(robot1, q_now, q_pick, steps=40, carry_mesh=target_glass)
+robot1.gripper_close(steps=25)
 
-# Lift clear
-T_lift = SE3(target_glass.T[0:3, 3][0], target_glass.T[0:3, 3][1], target_glass.T[0:3, 3][2] + 0.18) * SE3.Ry(np.pi/2)
-sol_lift = solve_ik(robot1, T_lift, q_now)
-if sol_lift.success:
-    q_now = move_joint_traj(robot1, q_now, sol_lift.q, steps=50, carry_mesh=target_glass)
-else:
-    print("[Glassbot] ❌ IK failed for lift")
+# 3. Lift
+T_lift = SE3(g_pos[0] - 0.015, g_pos[1], g_pos[2] + 0.25) * SIDE_GRASP_ROT
+q_lift = solve_ik(robot1, T_lift, q_now)
+q_now = move_joint_traj(robot1, q_now, q_lift, steps=50, carry_mesh=target_glass)
 
-# Place location near R2: choose a conservative reachable point in front of R2
-place_x = 0.45  # metres (adjust if you want it closer/further)
-place_y = table1_center_y
-place_z = table1_height + 0.03
+# 4. Move to x = 1.2 (within reachable range)
+target_x = 1.2
+T_move = SE3(target_x, g_pos[1], g_pos[2] + 0.25) * SIDE_GRASP_ROT
+q_move = solve_ik(robot1, T_move, q_now)
+q_now = move_joint_traj(robot1, q_now, q_move, steps=60, carry_mesh=target_glass)
 
-q_now = cartesian_place_and_release(robot1, q_now, (place_x, place_y), final_z=place_z, tcp_orientation=SE3.Ry(np.pi/2))
+# 5. Place down
+T_place = SE3(target_x, g_pos[1], g_pos[2]) * SIDE_GRASP_ROT
+q_place = solve_ik(robot1, T_place, q_now)
+q_now = move_joint_traj(robot1, q_now, q_place, steps=50, carry_mesh=target_glass)
+robot1.gripper_open(steps=20)
 
-print("✓ Glassbot pick-and-place finished")
+# 6. Lift up and return home
+T_lift_after = SE3(target_x, g_pos[1], g_pos[2] + 0.25) * SIDE_GRASP_ROT
+q_lift_after = solve_ik(robot1, T_lift_after, q_now)
+q_now = move_joint_traj(robot1, q_now, q_lift_after, steps=50)
+q_now = move_joint_traj(robot1, q_now, home_q, steps=70)
+
+print("✓ Glass successfully picked, moved, and placed at x=1.2.\n")
 
 env.hold()
