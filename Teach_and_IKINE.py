@@ -108,71 +108,6 @@ ROBOT_BASE_POSES = {
 }
 
 # ============================================================================
-# GENERIC HELPER FUNCTIONS
-# ============================================================================
-
-def find_ikine(robot, target_tr, initial_q_guess=None, ignore_rotation=False):
-    """Generic IK function that works on any DHRobot object."""
-    num_attempts = 25
-    min_limits = robot.qlim[0, :]
-    max_limits = robot.qlim[1, :]
-    mask = [1, 1, 1, 0, 0, 0] if ignore_rotation else None
-
-    for i in range(num_attempts):
-        if i == 0 and initial_q_guess is not None:
-            q_guess = np.deg2rad(initial_q_guess) if len(initial_q_guess) == len(robot.q) else robot.q
-        else:
-            q_guess = np.random.uniform(low=min_limits, high=max_limits)
-
-        ik_result = robot.ikine_LM(target_tr, q0=q_guess, mask=mask)
-
-        if ik_result.success:
-            solution = ik_result.q
-            if np.all((solution >= min_limits) & (solution <= max_limits)):
-                print(f"IK solution found on attempt {i+1}.")
-                return solution, True
-    
-    logging.warning(f"Failed to find a valid IK solution after {num_attempts} attempts.")
-    return robot.q, False
-
-def animate_trajectory(robot, sim_env, start_q, end_q, steps):
-    """Generic trajectory animation function."""
-    q_path = rtb.jtraj(start_q, end_q, steps).q
-    for q_config in q_path:
-        robot.q = np.clip(q_config, robot.qlim[0, :], robot.qlim[1, :])
-        sim_env.step(0.02)
-
-def slider_callback(value, joint_index, robot):
-    """Generic callback for sliders."""
-    new_q = robot.q.copy()
-    new_q[joint_index] = np.deg2rad(value)
-    robot.q = new_q
-    
-    q_degrees = np.round(np.rad2deg(robot.q), 2)
-    print(f"Joint state (deg): {q_degrees}")
-    
-    tr_matrix = robot.fkine(robot.q) 
-    print(f"End-effector pose:\n{np.round(tr_matrix.A, 4)}")
-
-def create_sliders(robot, sim_env):
-    """Creates and adds sliders to the environment for a given robot."""
-    sliders = []
-    for i in range(robot.n):
-        slider = swift.Slider(
-            cb=lambda value, j=i: slider_callback(value, j, robot),
-            min=np.rad2deg(robot.qlim[0, i]),
-            max=np.rad2deg(robot.qlim[1, i]),
-            step=1,
-            value=np.rad2deg(robot.q[i]),
-            desc=f'Joint {i+1} Angle',
-            unit='°'
-        )
-        sliders.append(slider)
-    
-    for s in sliders:
-        sim_env.add(s)
-
-# ============================================================================
 # ENVIRONMENT SETUP
 # ============================================================================
 
@@ -431,10 +366,89 @@ robot4.add_to_env(env)
 # MAIN TEACHING INTERFACE
 # ============================================================================
 
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def find_ikine(robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False):
+    """Generic IK function that works on any DHRobot object."""
+    num_attempts = 100
+    min_limits = robot.qlim[0, :]
+    max_limits = robot.qlim[1, :]
+    mask = [1, 1, 1, 1, 1, 1]
+    if ignore_var == "x":
+        mask[0] = 0
+    elif ignore_var == "y":
+        mask[1] = 0
+    elif ignore_var == "z":
+        mask[2] = 0
+    else:
+        mask = [1, 1, 1, 1, 1, 1]
+    if ignore_rotation:
+        for i in range(3,6):
+            mask[i] = 0
+    else:
+        for i in range(3,6):
+            mask[i] = 1
+
+    for i in range(num_attempts):
+        if i == 0 and initial_q_guess is not None:
+            q_guess = np.deg2rad(initial_q_guess) if len(initial_q_guess) == len(robot.q) else robot.q
+        else:
+            q_guess = np.random.uniform(low=min_limits, high=max_limits)
+
+        ik_result = robot.ikine_LM(target_tr, q0=q_guess, mask=mask)
+
+        if ik_result.success:
+            solution = ik_result.q
+            if np.all((solution >= min_limits) & (solution <= max_limits)):
+                print(f"IK solution found on attempt {i+1}.")
+                return solution, True
+    
+    logging.warning(f"Failed to find a valid IK solution after {num_attempts} attempts.")
+    return robot.q, False
+
+def animate_trajectory(robot, sim_env, start_q, end_q, steps):
+    """Generic trajectory animation function."""
+    q_path = rtb.jtraj(start_q, end_q, steps).q
+    for q_config in q_path:
+        robot.q = np.clip(q_config, robot.qlim[0, :], robot.qlim[1, :])
+        sim_env.step(0.02)
+
+def slider_callback(value, joint_index, robot):
+    """Generic callback for sliders."""
+    new_q = robot.q.copy()
+    new_q[joint_index] = np.deg2rad(value)
+    robot.q = new_q
+    
+    q_degrees = np.round(np.rad2deg(robot.q), 2)
+    print(f"Joint state (deg): {q_degrees}")
+    
+    tr_matrix = robot.fkine(robot.q) 
+    print(f"End-effector pose:\n{np.round(tr_matrix.A, 4)}")
+
+def create_sliders(robot, sim_env):
+    """Creates and adds sliders to the environment for a given robot."""
+    sliders = []
+    for i in range(robot.n):
+        slider = swift.Slider(
+            cb=lambda value, j=i: slider_callback(value, j, robot),
+            min=np.rad2deg(robot.qlim[0, i]),
+            max=np.rad2deg(robot.qlim[1, i]),
+            step=1,
+            value=np.rad2deg(robot.q[i]),
+            desc=f'Joint {i+1} Angle',
+            unit='°'
+        )
+        sliders.append(slider)
+    
+    for s in sliders:
+        sim_env.add(s)
+
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "Drinkbot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
-    RUN_IKINE = False  # False for sliders, True for IK test
+    RUN_IKINE = True  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "IngredientBot":
@@ -452,12 +466,12 @@ if __name__ == "__main__":
     if RUN_IKINE:
         print(f"Running IKINE test for {ROBOT_TO_LOAD}...")
 
-        target_pose = SE3(0.26, -0.9625, 0.29)
+        target_pose = SE3(-0.9, -0.575, 1.01) @ SE3.Ry(pi)
         print(f"Target Pose:\n{np.round(target_pose.A, 4)}\n")
 
         initial_q = robot_arm.q.copy()
         q_guess = [-74.207, 141.295, -31.751, 9.875, 103.964, -24.255]
-        target_q, success = find_ikine(robot_arm, target_pose, initial_q_guess=q_guess, ignore_rotation=True)
+        target_q, success = find_ikine(robot_arm, target_pose, ignore_var="z", ignore_rotation=False)
 
         if success:
             print("Animating robot...")
