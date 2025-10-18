@@ -15,10 +15,10 @@ class Serverbot(DHRobot3D):
         # ----------------------------- DH MODEL -----------------------------
         links = self._create_DH()
 
-        # Mesh mapping for each link (must exist in the same folder)
+        # Mesh mapping for each link (must exist in Serverbot_STLs folder)
         link3D_names = dict(
-            link0="base_rail", color0 = (0.2,0.2,0.2,1),
-            link1="slider_rail", color1 = (0.1,0.1,0.1,1),
+            link0="base_rail_ur3", color0=(0.2,0.2,0.2,1),
+            link1="slider_rail_ur3", color1=(0.1,0.1,0.1,1),
             link2="shoulder_ur3",
             link3="upperarm_ur3",
             link4="forearm_ur3",
@@ -26,6 +26,16 @@ class Serverbot(DHRobot3D):
             link6="wrist2_ur3",
             link7="wrist3_ur3",
         )
+
+        current_path = os.path.abspath(os.path.dirname(__file__))
+        link3d_path = os.path.join(current_path, "assets")  # Correct folder
+
+        # Optional: verify files exist
+        for i in range(8):
+            filename = f"{link3D_names[f'link{i}']}.stl"
+            filepath = os.path.join(link3d_path, filename)
+            if not os.path.exists(filepath):
+                print(f"Warning: STL file not found: {filepath}")
 
         # Reference configuration and STL alignment transforms
         qtest = [0, 0, -pi / 2, 0, 0, 0, 0]
@@ -40,12 +50,11 @@ class Serverbot(DHRobot3D):
             spb.transl(0.08535, 0.603, -0.1225) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),
         ]
 
-        current_path = os.path.abspath(os.path.dirname(__file__))
         super().__init__(
             links,
             link3D_names,
             name="Serverbot",
-            link3d_dir=current_path,
+            link3d_dir=link3d_path,  # Fixed path here
             qtest=qtest,
             qtest_transforms=qtest_transforms,
         )
@@ -138,6 +147,7 @@ class Serverbot(DHRobot3D):
         self.open_gripper()
         print("Sim Successful")
         env.hold()
+
 
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
