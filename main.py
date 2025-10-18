@@ -63,10 +63,9 @@ table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table
 
 # Table 3 (drinks shelf)
 table3_length = 4.0
-table3_width  = 0.75
-table3_height = 1.5
-table3_offset_from_wall = 0
-table3_center_y = -3 + wall_thickness + table1_offset_from_wall + table3_width / 2
+table3_width  = 0.325
+table3_height = 1.2
+table3_center_y = -1.75 + wall_thickness + table3_width / 2
 
 # Glass table (for cups)
 glass_table_length = 0.4
@@ -99,8 +98,8 @@ wrap_spacing_factor = 0.25                 # fraction of table height between wr
 
 ROBOT_BASE_POSES = {
     "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height + floor_height),
-    "R2_ALCOHOL":   SE3(-1.6, table1_center_y, table1_height + floor_height),
-    "R3_MIXERS":    SE3(0.0, table1_center_y, table1_height + floor_height),
+    "R2_ALCOHOL":   SE3(0.0, table1_center_y, table1_height + floor_height),
+    "R3_MIXERS":    SE3(-1.6, table1_center_y, table1_height + floor_height),
     "R4_SERVER":    SE3(0.0, table2_center_y, table2_height + floor_height),
 }
 
@@ -112,25 +111,25 @@ env = swift.Swift()
 env.launch(realtime=True)
 
 # --- Floor ---
-floor = Cuboid(scale=[6, 4, 0.02],
+floor = Cuboid(scale=[6, 3.25, 0.02],
                color=[0.25, 0.3, 0.35, 1],
-               pose=SE3(0, -0.5, floor_height))
+               pose=SE3(0, -0.125, floor_height))
 env.add(floor)
 
 # --- Walls ---
 back_wall = Cuboid(scale=[6, wall_thickness, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(0, -2.5, wall_height/2))
+                   pose=SE3(0, -1.75, wall_height/2))
 env.add(back_wall)
 
-left_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
+left_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(-3, -0.5, wall_height/2))
+                   pose=SE3(-3, -0.125, wall_height/2))
 env.add(left_wall)
 
-right_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
+right_wall = Cuboid(scale=[wall_thickness, 3.25, wall_height],
                     color=[0.85, 0.85, 0.9, 1],
-                    pose=SE3(3, -0.5, wall_height/2))
+                    pose=SE3(3, -0.125, wall_height/2))
 env.add(right_wall)
 
 # ----------------------------------------------------
@@ -223,6 +222,13 @@ stop_base = Cuboid(
 )
 env.add(stop_base)
 
+stop_base = Cuboid(
+    scale=[BUTTON_BASE_LENGTH, BUTTON_BASE_WIDTH, BUTTON_BASE_HEIGHT],
+    color=button_base_color,
+    pose=SE3(0.26, -1.538, 1.3)
+)
+env.add(stop_base)
+
 red_button = Cylinder(
     radius=BUTTON_RADIUS,
     length=BUTTON_HEIGHT,
@@ -243,13 +249,13 @@ robot1.add_to_env(env)
 
 
 # Robot 2: Alcohol Pourer
-robot2 = Drinkbot()
+robot2 = IngredientBot()
 robot2.q = robot2.home_q
 robot2.base = ROBOT_BASE_POSES["R2_ALCOHOL"]
 robot2.add_to_env(env)
 
 # Robot 3: Mixer Adder
-robot3 = IngredientBot()
+robot3 = Drinkbot()
 robot3.q = robot3.home_q
 robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
@@ -303,6 +309,7 @@ drink_color = [0, 0, 0.4, 0.7]  # bright, slightly transparent
 
 drink_count = 9
 drink_gaps = (2 - drink_radius) / drink_count + 0.03
+drink_poses = []
 
 for i in range(drink_count):
     # Create Cylinder standing upright
@@ -313,6 +320,7 @@ for i in range(drink_count):
                               table3_height + drink_height/2))  # no rotation, upright along z
     env.add(drink)
     print("Added drink at location: ", 1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2)
+    drink_poses.append(SE3(1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2))
 
 # --- 3. Alcohol Bottle (PLACEHOLDER for R2) ---
 # ALCOHOL_POSE = SE3(x, y, z) 
@@ -383,7 +391,7 @@ R1_POSES = {
 # R2 (Drinkbot) - Will need to collect these with teach mode later
 R2_POSES = {
     "HOME": robot2.q.copy(),
-    "HANDOFF_PICKUP": robot2.q.copy(),  # Position to receive glass
+    "PICKUP_DRINK": np.deg2rad(np.array([0., 0., 0., 0., 0., 0.])),  # Position to pick up drink
     "HANDOFF_PLACE": robot2.q.copy(),    # Position to place glass back
 }
 
@@ -513,6 +521,14 @@ print(f"  Held by R2: {held_by_r2}")
 print(f"  Glass position: {np.round(target_glass.T[0:3, 3], 3)}")
 
 time.sleep(1.0)
+
+print("[R2] Moving to drinks shelf...")
+print("Target pose of drink 3:")
+print(drink_poses[3])
+print("Drinkbot pose:")
+print(ROBOT_BASE_POSES["R2_ALCOHOL"])
+print("Relative pose from drinkbot to drink 4:")
+print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
 
 
 # --- STEP 4: R2 Picks Up Glass and Pours Alcohol (PLACEHOLDER) ---
