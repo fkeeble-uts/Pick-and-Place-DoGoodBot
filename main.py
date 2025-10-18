@@ -485,7 +485,7 @@ R1_POSES = {
 # R2 (Drinkbot) - Will need to collect these with teach mode later
 R2_POSES = {
     "HOME": robot2.q.copy(),
-    "PICKUP_DRINK": np.deg2rad(np.array([0., 0., 0., 0., 0., 0.])),  # Position to pick up drink
+    "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
     "HANDOFF_PLACE": robot2.q.copy(),    # Position to place glass back
 }
 
@@ -659,4 +659,3 @@ print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
 # ----------------------------------------------------
 
 env.hold()
-
