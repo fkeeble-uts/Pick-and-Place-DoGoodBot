@@ -485,7 +485,7 @@ R1_POSES = {
 # R2 (Drinkbot) - Will need to collect these with teach mode later
 R2_POSES = {
     "HOME": robot2.q.copy(),
-    "PICKUP_DRINK": np.deg2rad(np.array([0., 0., 0., 0., 0., 0.])),  # Position to pick up drink
+    "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
     "HANDOFF_PLACE": robot2.q.copy(),    # Position to place glass back
 }
 
@@ -556,63 +556,8 @@ time.sleep(0.5)
 # ============================================================================
 
 print("\n" + "="*70)
-print(">>> ROBOT 2: RECEIVING GLASS FROM R1 <<<")
+print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
-
-q_now_r2 = R2_POSES["HOME"]
-robot2.q = q_now_r2
-print_pose(robot2, "R2 at HOME")
-time.sleep(0.5)
-
-# Step 1: Move to handoff pickup position
-print("\n[R2] Moving to handoff location to receive glass...")
-# Use IK to reach the handoff position (same world location as R1's TCP)
-T_handoff = robot1.fkine(R1_POSES["HANDOFF"])
-print(f"  Handoff position (world): {np.round(T_handoff.t, 3)}")
-
-# Try to solve IK for R2 to reach handoff position using current R2 pose as guess
-sol = robot2.ikine_LM(T_handoff, q0=q_now_r2, mask=[1,1,1,0,0,0], joint_limits=True)
-if sol.success:
-    q_now_r2 = move_to_q(robot2, sol.q, steps=60, name="Handoff Pickup")
-    print_pose(robot2, "R2 at HANDOFF")
-    time.sleep(0.5)
-    
-    # Step 2: Simulate gripper opening to receive glass
-    print("\n[R2] Opening gripper to receive glass from R1...")
-    time.sleep(0.5)
-    
-    # Step 3: Simulate gripper closing around glass
-    print("\n[R2] Gripper closing around glass...")
-    held_by_r1 = False
-    held_by_r2 = True
-    time.sleep(0.5)
-    
-    # Step 4: Move glass to R2's TCP
-    print("\n[R2] Lifting glass...")
-    T_tcp_r2 = robot2.fkine(q_now_r2)
-    target_glass.T = T_tcp_r2.A
-    
-    # Step 5: Return to home
-    print("\n[R2] Returning to home...")
-    q_now_r2 = move_to_q(robot2, R2_POSES["HOME"], steps=60, name="Home",
-                         carry_object=target_glass)
-    print_pose(robot2, "R2 at HOME with glass")
-    time.sleep(0.5)
-    
-else:
-    print("[R2] ❌ IK failed - could not reach handoff position")
-
-# ============================================================================
-# XIII. SUMMARY
-# ============================================================================
-
-print("\n" + "="*70)
-print(">>> HANDOFF COMPLETE <<<")
-print("="*70)
-print(f"\nGlass transfer status:")
-print(f"  Held by R1: {held_by_r1}")
-print(f"  Held by R2: {held_by_r2}")
-print(f"  Glass position: {np.round(target_glass.T[0:3, 3], 3)}")
 
 time.sleep(1.0)
 
@@ -624,6 +569,12 @@ print(ROBOT_BASE_POSES["R2_ALCOHOL"])
 print("Relative pose from drinkbot to drink 4:")
 print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
 
+# Step 7: Move to drink 4
+print("\n[R2] Moving to drink 4...")
+q_now_r2 = move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
+                      carry_object=None)
+print_pose(robot1, "R2 at Drink 4")
+time.sleep(0.5)
 
 # --- STEP 4: R2 Picks Up Glass and Pours Alcohol (PLACEHOLDER) ---
 # print("--- R2: Pouring Alcohol ---")
@@ -659,4 +610,3 @@ print(drink_poses[3]-ROBOT_BASE_POSES["R2_ALCOHOL"])
 # ----------------------------------------------------
 
 env.hold()
-
