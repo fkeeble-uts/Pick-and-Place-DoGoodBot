@@ -47,7 +47,7 @@ wall_height = 2.5      # metres
 wall_thickness = 0.05  # metres
 floor_height = 0.01    # slightly raised to avoid flicker
 
-# Table 1 (rear / large table)
+# Table 1 (large workstation table)
 table1_length = 4.0
 table1_width  = 0.75
 table1_height = 1.0
@@ -60,6 +60,13 @@ table2_width  = 0.7
 table2_height = 1.0
 table2_spacing = 1.0
 table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table2_width / 2)
+
+# Table 3 (drinks shelf)
+table3_length = 4.0
+table3_width  = 0.75
+table3_height = 1.5
+table3_offset_from_wall = 0
+table3_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table3_width / 2
 
 # Glass table (for cups)
 glass_table_length = 0.4
@@ -92,8 +99,8 @@ wrap_spacing_factor = 0.25                 # fraction of table height between wr
 
 ROBOT_BASE_POSES = {
     "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height + floor_height),
-    "R2_ALCOHOL":   SE3(0.0, table1_center_y, table1_height + floor_height),
-    "R3_MIXERS":    SE3(-1.6, table1_center_y, table1_height + floor_height),
+    "R2_ALCOHOL":   SE3(-1.6, table1_center_y, table1_height + floor_height),
+    "R3_MIXERS":    SE3(0.0, table1_center_y, table1_height + floor_height),
     "R4_SERVER":    SE3(0.0, table2_center_y, table2_height + floor_height),
 }
 
@@ -105,25 +112,25 @@ env = swift.Swift()
 env.launch(realtime=True)
 
 # --- Floor ---
-floor = Cuboid(scale=[6, 3, 0.02],
+floor = Cuboid(scale=[6, 4, 0.02],
                color=[0.25, 0.3, 0.35, 1],
-               pose=SE3(0, 0, floor_height))
+               pose=SE3(0, -0.5, floor_height))
 env.add(floor)
 
 # --- Walls ---
 back_wall = Cuboid(scale=[6, wall_thickness, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(0, -1.5, wall_height/2))
+                   pose=SE3(0, -2.5, wall_height/2))
 env.add(back_wall)
 
-left_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+left_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(-3, 0, wall_height/2))
+                   pose=SE3(-3, -0.5, wall_height/2))
 env.add(left_wall)
 
-right_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+right_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
                     color=[0.85, 0.85, 0.9, 1],
-                    pose=SE3(3, 0, wall_height/2))
+                    pose=SE3(3, -0.5, wall_height/2))
 env.add(right_wall)
 
 # ----------------------------------------------------
@@ -132,7 +139,7 @@ env.add(right_wall)
 
 tables = [
     {
-        "name": "Table 1",
+        "name": "Workstation",
         "length": table1_length,
         "width": table1_width,
         "height": table1_height,
@@ -140,7 +147,7 @@ tables = [
         "leds": False  # no LEDs on back table
     },
     {
-        "name": "Table 2",
+        "name": "UR3e Table",
         "length": table2_length,
         "width": table2_width,
         "height": table2_height,
@@ -154,6 +161,14 @@ tables = [
         "height": glass_table_height,
         "center": SE3(glass_table_center_x, glass_table_center_y, 0),
         "leds": True
+    },
+    {
+        "name": "Drinks Shelf",
+        "length": table3_length,
+        "width": table3_width,
+        "height": table3_height,
+        "center": SE3(0, table3_center_y - 1.5, 0),
+        "leds": False  # no LEDs on back table
     }
 ]
 
