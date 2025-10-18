@@ -7,7 +7,7 @@ from spatialgeometry import Cylinder, Cuboid, Box
 from math import pi
 
 from Drinkbot import Drinkbot
-from Ingredientbot import IngredientBot 
+from IngredientBot import IngredientBot
 from Glassbot import Glassbot
 
 # ----------------------------------------------------
@@ -21,6 +21,11 @@ TRAJ_STEPS = 60      # Default steps for joint trajectory movement
 # --- Shared Object Dimensions ---
 GLASS_RADIUS = 0.03
 GLASS_HEIGHT = 0.06
+BUTTON_RADIUS = 0.05          # Radius of red button
+BUTTON_HEIGHT = 0.03          # Height of red button
+BUTTON_BASE_LENGTH = 0.12            # Base (cuboid) dimensions
+BUTTON_BASE_WIDTH = 0.12
+BUTTON_BASE_HEIGHT = 0.02
 
 # --- Gripper Visual Dimensions ---
 FINGER_LENGTH = 0.08
@@ -42,7 +47,7 @@ wall_height = 2.5      # metres
 wall_thickness = 0.05  # metres
 floor_height = 0.01    # slightly raised to avoid flicker
 
-# Table 1 (rear / large table)
+# Table 1 (large workstation table)
 table1_length = 4.0
 table1_width  = 0.75
 table1_height = 1.0
@@ -56,6 +61,13 @@ table2_height = 1.0
 table2_spacing = 1.0
 table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table2_width / 2)
 
+# Table 3 (drinks shelf)
+table3_length = 4.0
+table3_width  = 0.75
+table3_height = 1.5
+table3_offset_from_wall = 0
+table3_center_y = -3 + wall_thickness + table1_offset_from_wall + table3_width / 2
+
 # Glass table (for cups)
 glass_table_length = 0.4
 glass_table_width  = 0.7
@@ -63,9 +75,16 @@ glass_table_height = 1.05
 glass_table_center_x = table1_length/2 + glass_table_length/2 + 0.1  # just left of Table 1
 glass_table_center_y = table1_center_y
 
+# Emergency stop button
+button_center_x = 0.5  # along table length
+button_center_y = table2_center_y + table2_width / 2 - 0.1  # near the front edge
+button_center_z = table2_height + BUTTON_BASE_HEIGHT / 2 -0.01  # sits on table
+
 # LED / glow parameters
 base_color      = [0.1, 0.1, 0.15, 1]     # dark graphite
 top_color       = [0.0, 0.6, 0.8, 1]      # neon cyan
+button_base_color = [0.2, 0.2, 0.2, 1]       # Dark gray
+button_color = [0.8, 0, 0, 1] 
 top_glow_color  = [0.0, 0.8, 1.0, 0.3]    # semi-transparent glow
 led_color       = [0.0, 0.8, 1.0, 0.6]    # bright cyan
 led_height      = 0.05                     # LED thickness
@@ -80,8 +99,8 @@ wrap_spacing_factor = 0.25                 # fraction of table height between wr
 
 ROBOT_BASE_POSES = {
     "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height + floor_height),
-    "R2_ALCOHOL":   SE3(0.0, table1_center_y, table1_height + floor_height),
-    "R3_MIXERS":    SE3(-1.6, table1_center_y, table1_height + floor_height),
+    "R2_ALCOHOL":   SE3(-1.6, table1_center_y, table1_height + floor_height),
+    "R3_MIXERS":    SE3(0.0, table1_center_y, table1_height + floor_height),
     "R4_SERVER":    SE3(0.0, table2_center_y, table2_height + floor_height),
 }
 
@@ -93,25 +112,25 @@ env = swift.Swift()
 env.launch(realtime=True)
 
 # --- Floor ---
-floor = Cuboid(scale=[6, 3, 0.02],
+floor = Cuboid(scale=[6, 4, 0.02],
                color=[0.25, 0.3, 0.35, 1],
-               pose=SE3(0, 0, floor_height))
+               pose=SE3(0, -0.5, floor_height))
 env.add(floor)
 
 # --- Walls ---
 back_wall = Cuboid(scale=[6, wall_thickness, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(0, -1.5, wall_height/2))
+                   pose=SE3(0, -2.5, wall_height/2))
 env.add(back_wall)
 
-left_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+left_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
                    color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(-3, 0, wall_height/2))
+                   pose=SE3(-3, -0.5, wall_height/2))
 env.add(left_wall)
 
-right_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+right_wall = Cuboid(scale=[wall_thickness, 4, wall_height],
                     color=[0.85, 0.85, 0.9, 1],
-                    pose=SE3(3, 0, wall_height/2))
+                    pose=SE3(3, -0.5, wall_height/2))
 env.add(right_wall)
 
 # ----------------------------------------------------
@@ -120,7 +139,7 @@ env.add(right_wall)
 
 tables = [
     {
-        "name": "Table 1",
+        "name": "Workstation",
         "length": table1_length,
         "width": table1_width,
         "height": table1_height,
@@ -128,7 +147,7 @@ tables = [
         "leds": False  # no LEDs on back table
     },
     {
-        "name": "Table 2",
+        "name": "UR3e Table",
         "length": table2_length,
         "width": table2_width,
         "height": table2_height,
@@ -142,6 +161,14 @@ tables = [
         "height": glass_table_height,
         "center": SE3(glass_table_center_x, glass_table_center_y, 0),
         "leds": True
+    },
+    {
+        "name": "Drinks Shelf",
+        "length": table3_length,
+        "width": table3_width,
+        "height": table3_height,
+        "center": SE3(0, table3_center_y, 0),
+        "leds": False  # no LEDs on back table
     }
 ]
 
@@ -186,6 +213,24 @@ for t in tables:
                                color=led_color,
                                pose=SE3(cx, cy, wrap_z))
             env.add(wrap_ring)
+
+# --- Emergency stop button ---
+stop_base = Cuboid(
+    scale=[BUTTON_BASE_LENGTH, BUTTON_BASE_WIDTH, BUTTON_BASE_HEIGHT],
+    color=button_base_color,
+    pose=SE3(button_center_x, button_center_y, 
+             button_center_z + BUTTON_BASE_HEIGHT/2)
+)
+env.add(stop_base)
+
+red_button = Cylinder(
+    radius=BUTTON_RADIUS,
+    length=BUTTON_HEIGHT,
+    color=button_color,
+    pose=SE3(button_center_x, button_center_y, 
+             button_center_z + BUTTON_BASE_HEIGHT/2 + BUTTON_HEIGHT/2)
+)
+env.add(red_button)
 
 # ----------------------------------------------------
 # V. ROBOT INSTANTIATION & PLACEMENT
@@ -249,6 +294,25 @@ for yf in width_fractions:
                          pose=SE3(x_pos, y_pos, z_pos))  # no rotation, upright along z
         env.add(glass)
         glass_objects.append(glass)
+
+# --- Drinks on drink shelf ---
+# Drink parameters
+drink_radius = 0.05  # radius of drink
+drink_height = 0.2    # height of drink
+drink_color = [0, 0, 0.4, 0.7]  # bright, slightly transparent
+
+drink_count = 9
+drink_gaps = (2 - drink_radius) / drink_count + 0.03
+
+for i in range(drink_count):
+    # Create Cylinder standing upright
+    drink = Cylinder(radius=drink_radius,
+                     length=drink_height,
+                     color=drink_color,
+                     pose=SE3(1 - drink_gaps * i, table3_center_y, 
+                              table3_height + drink_height/2))  # no rotation, upright along z
+    env.add(drink)
+    print("Added drink at location: ", 1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2)
 
 # --- 3. Alcohol Bottle (PLACEHOLDER for R2) ---
 # ALCOHOL_POSE = SE3(x, y, z) 
