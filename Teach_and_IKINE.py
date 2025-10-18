@@ -370,26 +370,22 @@ robot4.add_to_env(env)
 # HELPER FUNCTIONS
 # ============================================================================
 
-def find_ikine(robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False):
-    """Generic IK function that works on any DHRobot object."""
+def find_ikine(robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False, hover_max=None):
+    """
+    Generalized IK function with a robust hover-zone check for x, y, or z axes.
+    """
     num_attempts = 100
     min_limits = robot.qlim[0, :]
     max_limits = robot.qlim[1, :]
     mask = [1, 1, 1, 1, 1, 1]
-    if ignore_var == "x":
-        mask[0] = 0
-    elif ignore_var == "y":
-        mask[1] = 0
-    elif ignore_var == "z":
-        mask[2] = 0
-    else:
-        mask = [1, 1, 1, 1, 1, 1]
+    
+    # Map the ignored variable to its index (0=x, 1=y, 2=z)
+    coord_map = {"x": 0, "y": 1, "z": 2}
+    if ignore_var in coord_map:
+        mask[coord_map[ignore_var]] = 0
+        
     if ignore_rotation:
-        for i in range(3,6):
-            mask[i] = 0
-    else:
-        for i in range(3,6):
-            mask[i] = 1
+        mask[3:6] = [0, 0, 0]
 
     for i in range(num_attempts):
         if i == 0 and initial_q_guess is not None:
@@ -402,8 +398,31 @@ def find_ikine(robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rot
         if ik_result.success:
             solution = ik_result.q
             if np.all((solution >= min_limits) & (solution <= max_limits)):
-                print(f"IK solution found on attempt {i+1}.")
-                return solution, True
+                
+                # --- NEW GENERALIZED HOVER VALIDATION BLOCK ---
+                # Check if this is a hover-find call for a specific axis
+                if hover_max is not None and ignore_var in coord_map:
+                    axis_index = coord_map[ignore_var]
+                    
+                    # Perform an FK check on the potential solution
+                    solution_pose = robot.fkine(solution)
+                    solution_coord = solution_pose.t[axis_index]
+                    target_coord = target_tr.t[axis_index]
+                    
+                    # Use min() and max() to handle both positive and negative hover_max
+                    lower_bound = min(target_coord, target_coord + hover_max)
+                    upper_bound = max(target_coord, target_coord + hover_max)
+                    
+                    # Check if the coordinate is in the valid range
+                    if lower_bound <= solution_coord <= upper_bound:
+                        print(f"IK solution found on attempt {i+1} with valid hover on axis '{ignore_var}'.")
+                        return solution, True
+                    # If not, this solution is invalid, so the loop continues
+                
+                else:
+                    # This is a standard IK call, so return the solution immediately
+                    print(f"IK solution found on attempt {i+1}.")
+                    return solution, True
     
     logging.warning(f"Failed to find a valid IK solution after {num_attempts} attempts.")
     return robot.q, False
@@ -448,8 +467,7 @@ def create_sliders(robot, sim_env):
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "Drinkbot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
-    RUN_IKINE = True  # False for sliders, True for IK test
-    RUN_IKINE = True  # False for sliders, True for IK test
+    RUN_IKINE = False  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "IngredientBot":
@@ -465,27 +483,51 @@ if __name__ == "__main__":
 
     # --- MODE SELECTION ---
     if RUN_IKINE:
-        print(f"Running IKINE test for {ROBOT_TO_LOAD}...")
+        print(f"Running IKINE for {ROBOT_TO_LOAD}...")
 
+        hover_max = 0.5
         target_pose = SE3(-0.9, -0.575, 1.01) @ SE3.Ry(pi)
         print(f"Target Pose:\n{np.round(target_pose.A, 4)}\n")
 
         initial_q = robot_arm.q.copy()
         q_guess = [-74.207, 141.295, -31.751, 9.875, 103.964, -24.255]
-        target_q, success = find_ikine(robot_arm, target_pose, ignore_var="z", ignore_rotation=False)
+        target_q, success = find_ikine(robot_arm, target_pose, ignore_var="z", ignore_rotation=False, hover_max=hover_max)
 
         if success:
-            print("Animating robot...")
+            print("Animating robot to hover pose...")
             animate_trajectory(robot_arm, env, initial_q, target_q, 100)
             
             final_q_deg = np.round(np.rad2deg(robot_arm.q), 3)
             final_pose = robot_arm.fkine(robot_arm.q)
 
-            print("\n--- IK Test Complete ---")
-            print(f"Final Joint State (deg): {final_q_deg}")
-            print(f"Final Robot Pose:\n{np.round(final_pose.A, 4)}")
+            print("\n--- IK Hover Solution Complete ---")
+            print(f"Hover Joint State (deg): {final_q_deg}")
+            print(f"Hover Robot Pose:\n{np.round(final_pose.A, 4)}")
+
+            print("Following Cartesian path...")
+
+            # generate a cartesian path
+            start_pose = robot_arm.fkine(robot_arm.q)
+            cartesian_path = rtb.ctraj(start_pose, target_pose, 50) # 50 steps
+
+            for next_pose in cartesian_path:
+                # Use the robot's current joint state as the initial guess for the next step.
+                # This makes the solver very fast and stable.
+                q_step, solved = find_ikine(robot_arm, next_pose, 
+                                            initial_q_guess=np.rad2deg(robot_arm.q), 
+                                            ignore_rotation=False)
+                
+                if solved:
+                    # If a solution was found, update the robot's joints
+                    robot_arm.q = q_step
+                    env.step(SIM_STEP_TIME) # Update the simulation
+                else:
+                    # If any step fails, stop the movement
+                    logging.warning("IK failed for a step in the Cartesian path. Halting motion.")
+                    break
         else:
-            print("\n--- IK Test Failed ---")
+            print("\n--- IK Hover Solution Failed ---")
+        
 
     else:
         print(f"Running TEACH mode for {ROBOT_TO_LOAD}...")
