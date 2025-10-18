@@ -14,9 +14,8 @@ from spatialgeometry import Sphere, Cuboid
 class Glassbot(DHRobot3D):
     def __init__(self):
         """
-        Glassbot Robot using DH model + STL meshes.
-        Inherits from DHRobot3D for easy 3D visualization.
-        Adds gripper support with green fingers.
+        ABB IRB120 Robot using DH model + STL meshes with grippers.
+        Inherits from DHRobot3D for 3D visualisation.
         """
         # DH links
         links = self._create_DH()
@@ -35,7 +34,7 @@ class Glassbot(DHRobot3D):
         # Reference test joint config
         qtest = [0, 0, 0, 0, 0, 0]
 
-        # Alignment transforms for meshes
+        # Alignment transforms
         qtest_transforms = [
             spb.transl(0, 0, 0) @ spb.rpy2tr(0, 0, 0, order="xyz"),
             spb.transl(0, 0, 0.291) @ spb.rpy2tr(0, 0, -pi/2, order="xyz"),
@@ -76,8 +75,11 @@ class Glassbot(DHRobot3D):
         self._right_finger = Cuboid([self._finger_length, self._finger_thickness, self._finger_height],
                                     color=[0.2, 0.8, 0.2, 1])
 
-    # --------------------- Add to environment --------------------- #
+    # -----------------------------------------------------------------------------------#
     def add_to_env(self, env):
+        """
+        Add robot and grippers to the Swift environment
+        """
         super().add_to_env(env)
         self._env = env
         env.add(self._left_finger)
@@ -111,29 +113,49 @@ class Glassbot(DHRobot3D):
             if self._env:
                 self._env.step(0.02)
 
-    # --------------------- Existing DH --------------------- #
+    # -----------------------------------------------------------------------------------#
     def _create_DH(self):
+        """
+        ABB IRB120 Standard DH parameters
+        """
         a     = [0.0,   0.270, 0.070, 0.0, 0.0, 0.0]
         d     = [0.290, 0.0,   0.0,   0.302, 0.0, 0.072]
         alpha = [-pi/2, 0.0,  -pi/2,  pi/2, -pi/2, 0.0]
         offset = [0.0, -pi/2, 0.0, 0.0, 0.0, pi]
-        qlim = [[-pi, pi], [-pi/2, 110*pi/180], [-110*pi/180, 70*pi/180],
-                [-160*pi/180, 160*pi/180], [-120*pi/180, 120*pi/180], [-400*pi/180, 400*pi/180]]
+
+        qlim = [
+            [-180*pi/180,  180*pi/180],
+            [-90*pi/180,   110*pi/180],
+            [-110*pi/180,  70*pi/180],
+            [-160*pi/180,  160*pi/180],
+            [-120*pi/180,  120*pi/180],
+            [-400*pi/180,  400*pi/180]
+        ]
+
         links = []
         for i in range(6):
             links.append(rtb.RevoluteDH(d=d[i], a=a[i], alpha=alpha[i],
                                         offset=offset[i], qlim=qlim[i]))
         return links
 
-    # --------------------- Test methods --------------------- #
+    # -----------------------------------------------------------------------------------#
     def test(self):
+        """
+        Test the robot with grippers in Swift
+        """
         env = swift.Swift()
         env.launch(realtime=True)
         self.q = self._qtest
         self.add_to_env(env)
+
+        # Open gripper initially
         self.gripper_open()
+
+        # Teach panel
         fig = self.plot(self.q, limits=[-1, 1, -1, 1, 0, 1.2])
         fig._add_teach_panel(self, self.q)
+
+        # Keep environment running
         while plt.fignum_exists(fig.fig.number):
             self.add_to_env(env)
             env.step(0.02)
@@ -144,24 +166,33 @@ class Glassbot(DHRobot3D):
         fig.hold()
 
     def test_with_fk(self, q_goal, tol=0.005):
+        """
+        Move robot to q_goal smoothly and check FK
+        """
         env = swift.Swift()
         env.launch(realtime=False)
         self.q = self._qtest
         self.add_to_env(env)
+
         T_desired = self.fkine(q_goal)
         qtraj = rtb.jtraj(self.q, q_goal, 30).q
         for q in qtraj:
             self.q = q
+            self._update_fingers()
             env.step(0.0001)
+
         T_final = self.fkine(self.q)
         pos_err = np.linalg.norm(T_final.t - T_desired.t)
         if pos_err <= tol:
             print(f"Reached goal within {pos_err:.4f} m")
         else:
             print(f"❌ Goal off by {pos_err:.4f} m")
+
         env.hold()
+
 
 # -----------------------------------------------------------------------------------#
 if __name__ == "__main__":
     r = Glassbot()
-    r.test()
+    q_goal = [0.5, -0.3, 0.2, 0.5, 0.5, 0.5]
+    r.test_with_fk(q_goal)
