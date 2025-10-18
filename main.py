@@ -278,7 +278,7 @@ robot3.add_to_env(env)
 
 # Robot 4: Server (placeholder)
 robot4 = Serverbot()
-robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
+robot4.base = ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
 robot4.add_to_env(env)
 
 # ----------------------------------------------------
