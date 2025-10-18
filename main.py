@@ -3,7 +3,7 @@ import numpy as np
 import swift
 from spatialmath import SE3
 import roboticstoolbox as rtb
-from spatialgeometry import Cylinder, Cuboid
+from spatialgeometry import Cylinder, Cuboid, Box
 
 from Drinkbot import Drinkbot
 from Ingredientbot import IngredientBot 
@@ -126,6 +126,124 @@ env.add(ice_dispenser)
 # --- 5. Serving Area/Dropoff (PLACEHOLDER for R4) ---
 # SERVE_AREA = Cuboid(scale=[...], pose=SE3(...), color=[0.5, 0.5, 0.5, 0.5])
 # env.add(SERVE_AREA)
+
+
+# --- 6. Floor and walls ---
+
+wall_height = 2.5      # metres
+wall_thickness = 0.05  # metres
+
+# --- Floor ---
+floor = Cuboid(scale=[5, 3, 0.02],
+               color=[0.25, 0.3, 0.35, 1],
+               pose=SE3(0, 0, 0.01))   # raised slightly to avoid flicker
+env.add(floor)
+
+# --- Back Wall (5m long) ---
+back_wall = Cuboid(scale=[5, wall_thickness, wall_height],
+                   color=[0.85, 0.85, 0.9, 1],
+                   pose=SE3(0, -1.5, wall_height/2))
+env.add(back_wall)
+
+# --- Left Wall (3m long) ---
+left_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+                   color=[0.85, 0.85, 0.9, 1],
+                   pose=SE3(-2.5, 0, wall_height/2))
+env.add(left_wall)
+
+# --- Right Wall (3m long) ---
+right_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+                    color=[0.85, 0.85, 0.9, 1],
+                    pose=SE3(2.5, 0, wall_height/2))
+env.add(right_wall)
+
+# --- 7. Futuristic Tables with 3 Horizontal Wrap LEDs on Table 2 ---
+
+# Common colors
+base_color  = [0.1, 0.1, 0.15, 1]     # dark graphite / base
+top_color   = [0.0, 0.6, 0.8, 1]      # neon cyan top
+top_glow_color = [0.0, 0.8, 1.0, 0.3] # semi-transparent top glow
+led_color   = [0.0, 0.8, 1.0, 0.6]    # bright cyan LED
+led_height  = 0.05                     # LED thickness
+led_offset  = 0.01                     # slightly above floor
+led_margin  = 0.02                     # tiny extension beyond table edges
+
+# --- Table 1 (large table, unchanged) ---
+table1_length = 3.0
+table1_width  = 0.75
+table1_height = 1.0
+table1_offset_from_wall = 0.5
+table1_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table1_width / 2
+
+# Base
+table1_base = Cuboid(scale=[table1_length, table1_width, table1_height - 0.05],
+                     color=base_color,
+                     pose=SE3(0, table1_center_y, (table1_height - 0.05)/2))
+env.add(table1_base)
+
+# Tabletop
+table1_top = Cuboid(scale=[table1_length, table1_width, 0.05],
+                    color=top_color,
+                    pose=SE3(0, table1_center_y, table1_height - 0.025))
+env.add(table1_top)
+
+# Top glow
+table1_glow = Cuboid(scale=[table1_length*1.05, table1_width*1.05, 0.02],
+                     color=top_glow_color,
+                     pose=SE3(0, table1_center_y, table1_height - 0.015))
+env.add(table1_glow)
+
+# Base LED (slightly wider than table)
+table1_led = Cuboid(scale=[table1_length + led_margin*2, table1_width + led_margin*2, led_height],
+                    color=led_color,
+                    pose=SE3(0, table1_center_y, (led_height/2)+led_offset))
+env.add(table1_led)
+
+# --- Table 2 (smaller table with horizontal wrap LEDs) ---
+table2_length = 1.5
+table2_width  = 0.7
+table2_height = 1.0
+table2_spacing = 1.0
+table2_center_y = table1_center_y + (table1_width/2) + table2_spacing + (table2_width/2)
+
+# Base
+table2_base = Cuboid(scale=[table2_length, table2_width, table2_height - 0.05],
+                     color=base_color,
+                     pose=SE3(0, table2_center_y, (table2_height - 0.05)/2))
+env.add(table2_base)
+
+# Tabletop
+table2_top = Cuboid(scale=[table2_length, table2_width, 0.05],
+                    color=top_color,
+                    pose=SE3(0, table2_center_y, table2_height - 0.025))
+env.add(table2_top)
+
+# Top glow
+table2_glow = Cuboid(scale=[table2_length*1.05, table2_width*1.05, 0.02],
+                     color=top_glow_color,
+                     pose=SE3(0, table2_center_y, table2_height - 0.015))
+env.add(table2_glow)
+
+# Base LED (slightly wider than table)
+table2_led = Cuboid(scale=[table2_length + led_margin*2, table2_width + led_margin*2, led_height],
+                    color=led_color,
+                    pose=SE3(0, table2_center_y, (led_height/2)+led_offset))
+env.add(table2_led)
+
+# --- Horizontal wrap-around LED rings on Table 2 ---
+num_wraps = 3
+wrap_height = led_height
+# Evenly spaced from top of base LED to just below tabletop
+wrap_spacing = (table2_height - 0.05 - led_height) / (num_wraps + 1)
+
+for i in range(1, num_wraps+1):
+    wrap_z = led_height + wrap_spacing * i  # start from top of base LED
+    wrap_ring = Cuboid(
+        scale=[table2_length + led_margin*2, table2_width + led_margin*2, wrap_height],
+        color=led_color,
+        pose=SE3(0, table2_center_y, wrap_z)
+    )
+    env.add(wrap_ring)
 
 
 # ----------------------------------------------------
