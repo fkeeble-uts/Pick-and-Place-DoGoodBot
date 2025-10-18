@@ -183,7 +183,7 @@ tables = [
         "width": ingredients_table_width,
         "height": ingredients_table_height,
         "center": SE3(ingredients_table_center_x, ingredients_table_center_y, 0),
-        "leds": True  # no LEDs on back table 
+        "leds": True  
     }
 ]
 
@@ -336,13 +336,15 @@ for i in range(drink_count):
 # --- Adjustable Parameters ---
 
 # Chopping board dimensions
-board_length = 0.25
-board_width  = 0.15
+board_length = 0.3
+board_width  = 0.185
 board_height = 0.02
 
 # Cube (ingredient) dimensions
-cube_size = 0.04
-cube_height_offset = board_height + cube_size / 2 + 0.005  # sits just above board
+cube_size = 0.025
+cube_spacing_x = 0.07
+cube_spacing_y = 0.035
+cube_height_offset = board_height/2 + cube_size/2   # sits just above board
 
 # Colors
 board_color = [1.0, 1.0, 1.0, 1.0]   # pure white boards
@@ -358,6 +360,7 @@ board_fractions_y = [0.2, 0.5, 0.8]
 board_center_x_fraction = 0.5  # centered along table length
 
 ingredient_objects = []
+cube_objects = []
 
 for i, yf in enumerate(board_fractions_y):
     # Compute chopping board world position
@@ -376,18 +379,33 @@ for i, yf in enumerate(board_fractions_y):
     env.add(board)
     ingredient_objects.append(board)
 
-    # Add colored cube on top (different color for each board)
+    # 3x3 grid of cubes on each board
     color_key = list(cube_colors.keys())[i]
     cube_color = cube_colors[color_key]
 
-    cube = Cuboid(
-        scale=[cube_size, cube_size, cube_size],
-        color=cube_color,
-        pose=SE3(x_pos, y_pos, z_pos + cube_height_offset)
-    )
-    env.add(cube)
-    ingredient_objects.append(cube)
-    print(f"Added {color_key} cube on board {i+1} at ({x_pos:.2f}, {y_pos:.2f}, {z_pos + cube_height_offset:.2f})")
+    total_grid_size_x = 3 * cube_size + 2 * cube_spacing_x
+    total_grid_size_y = 3 * cube_size + 2 * cube_spacing_y
+    x_start = x_pos - total_grid_size_x / 2 + cube_size / 2
+    y_start = y_pos - total_grid_size_y / 2 + cube_size / 2
+
+    for row in range(3):
+        for col in range(3):
+            cube_x = x_start + col * (cube_size + cube_spacing_x)
+            cube_y = y_start + row * (cube_size + cube_spacing_y)
+            cube_z = z_pos + cube_height_offset
+
+            cube = Cuboid(
+                scale=[cube_size, cube_size, cube_size],
+                color=cube_color,
+                pose=SE3(cube_x, cube_y, cube_z)
+            )
+            env.add(cube)
+            ingredient_objects.append(cube)
+            cube_objects.append(cube)
+
+    print(f"Added 3x3 grid of {color_key} cubes on board {i+1} at ({x_pos:.2f}, {y_pos:.2f})")
+
+print(f"Total cubes: {len(cube_objects)}")
 
 # --- 3. Alcohol Bottle (PLACEHOLDER for R2) ---
 # ALCOHOL_POSE = SE3(x, y, z) 
