@@ -4,10 +4,12 @@ import swift
 from spatialmath import SE3
 import roboticstoolbox as rtb
 from spatialgeometry import Cylinder, Cuboid, Box
+from math import pi
 
 from Drinkbot import Drinkbot
 from Ingredientbot import IngredientBot 
 from Glassbot import Glassbot
+
 # ----------------------------------------------------
 # I. CONSTANTS & CONFIGURATION
 # ----------------------------------------------------
@@ -15,15 +17,6 @@ from Glassbot import Glassbot
 # --- Environment & Timing ---
 SIM_STEP_TIME = 0.02 # Time step for swift.step()
 TRAJ_STEPS = 60      # Default steps for joint trajectory movement
-
-# --- Robot Placement (Base Frames for all 4 robots) ---
-# NOTE: You will need to determine the optimal placement for collision avoidance
-ROBOT_BASE_POSES = {
-    "R1_ICE_GLASS": SE3(0.0, 0.0, 0.0), # Current robot is placed at origin
-    "R2_ALCOHOL": SE3(0.0, 1.0, 0.0),   # PLACEHOLDER: Define a clear pose for Robot 2
-    "R3_MIXERS": SE3(-1.0, 0.0, 0.0),   # PLACEHOLDER: Define a clear pose for Robot 3
-    "R4_SERVER": SE3(0.0, -1.0, 0.0),   # PLACEHOLDER: Define a clear pose for Robot 4
-}
 
 # --- Shared Object Dimensions ---
 GLASS_RADIUS = 0.03
@@ -38,55 +31,167 @@ FINGER_GAP_CLOSED = 0.055
 FINGER_BACK_OFFSET = 0.02
 FINGER_Z_OFFSET = -0.03
 
-# --- Global State Variable (used by R1's gripper, will need to be made per-robot) ---
+# --- Global State Variable (used by R1's gripper) ---
 _finger_gap_r1 = FINGER_GAP_OPEN
 
+# ----------------------------------------------------
+# II. TABLE & WALL DERIVED PARAMETERS
+# ----------------------------------------------------
+
+wall_height = 2.5      # metres
+wall_thickness = 0.05  # metres
+floor_height = 0.01    # raised slightly to avoid flicker
+
+# Table 1 (rear / large table)
+table1_length = 5.0
+table1_width  = 0.75
+table1_height = 1.0
+table1_offset_from_wall = 0.5
+table1_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table1_width / 2
+
+# Table 2 (smaller / front table)
+table2_length = 1.5
+table2_width  = 0.7
+table2_height = 1.0
+table2_spacing = 1.0
+table2_center_y = table1_center_y + (table1_width / 2) + table2_spacing + (table2_width / 2)
+
+# LED / glow parameters
+base_color  = [0.1, 0.1, 0.15, 1]     # dark graphite / base
+top_color   = [0.0, 0.6, 0.8, 1]      # neon cyan top
+top_glow_color = [0.0, 0.8, 1.0, 0.3] # semi-transparent top glow
+led_color   = [0.0, 0.8, 1.0, 0.6]    # bright cyan LED
+led_height  = 0.05                     # LED thickness
+led_offset  = 0.01                     # slightly above floor
+led_margin  = 0.02                     # tiny extension beyond table edges
 
 # ----------------------------------------------------
-# II. ENVIRONMENT SETUP (Swift Simulation)
+# III. ROBOT BASE POSES
 # ----------------------------------------------------
 
-# Initialize the Swift environment
+# Base frames for all 4 robots, using table positions for Z
+ROBOT_BASE_POSES = {
+    "R1_ICE_GLASS": SE3(2, table1_center_y, table1_height + floor_height), # on top of Table 1
+    "R2_ALCOHOL": SE3(0.0, table1_center_y, table1_height + floor_height),   # on top of Table 2
+    "R3_MIXERS": SE3(-2, table1_center_y, table1_height + floor_height),   # PLACEHOLDER
+    "R4_SERVER": SE3(0.0, table2_center_y, table2_height + floor_height),   # PLACEHOLDER
+}
+
+# ----------------------------------------------------
+# IV. ENVIRONMENT SETUP (Swift Simulation)
+# ----------------------------------------------------
+
 env = swift.Swift()
 env.launch(realtime=True)
 
+# --- Floor ---
+floor = Cuboid(scale=[7, 3, 0.02],
+               color=[0.25, 0.3, 0.35, 1],
+               pose=SE3(0, 0, floor_height))
+env.add(floor)
+
+# --- Walls ---
+back_wall = Cuboid(scale=[7, wall_thickness, wall_height],
+                   color=[0.85, 0.85, 0.9, 1],
+                   pose=SE3(0, -1.5, wall_height/2))
+env.add(back_wall)
+
+left_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+                   color=[0.85, 0.85, 0.9, 1],
+                   pose=SE3(-3.5, 0, wall_height/2))
+env.add(left_wall)
+
+right_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
+                    color=[0.85, 0.85, 0.9, 1],
+                    pose=SE3(3.5, 0, wall_height/2))
+env.add(right_wall)
+
+# --- Tables ---
+# Table 1
+table1_base = Cuboid(scale=[table1_length, table1_width, table1_height - 0.05],
+                     color=base_color,
+                     pose=SE3(0, table1_center_y, (table1_height - 0.05)/2))
+env.add(table1_base)
+
+table1_top = Cuboid(scale=[table1_length, table1_width, 0.05],
+                    color=top_color,
+                    pose=SE3(0, table1_center_y, table1_height - 0.025))
+env.add(table1_top)
+
+table1_glow = Cuboid(scale=[table1_length*1.05, table1_width*1.05, 0.02],
+                     color=top_glow_color,
+                     pose=SE3(0, table1_center_y, table1_height - 0.015))
+env.add(table1_glow)
+
+table1_led = Cuboid(scale=[table1_length + led_margin*2, table1_width + led_margin*2, led_height],
+                    color=led_color,
+                    pose=SE3(0, table1_center_y, (led_height/2)+led_offset))
+env.add(table1_led)
+
+# Table 2
+table2_base = Cuboid(scale=[table2_length, table2_width, table2_height - 0.05],
+                     color=base_color,
+                     pose=SE3(0, table2_center_y, (table2_height - 0.05)/2))
+env.add(table2_base)
+
+table2_top = Cuboid(scale=[table2_length, table2_width, 0.05],
+                    color=top_color,
+                    pose=SE3(0, table2_center_y, table2_height - 0.025))
+env.add(table2_top)
+
+table2_glow = Cuboid(scale=[table2_length*1.05, table2_width*1.05, 0.02],
+                     color=top_glow_color,
+                     pose=SE3(0, table2_center_y, table2_height - 0.015))
+env.add(table2_glow)
+
+table2_led = Cuboid(scale=[table2_length + led_margin*2, table2_width + led_margin*2, led_height],
+                    color=led_color,
+                    pose=SE3(0, table2_center_y, (led_height/2)+led_offset))
+env.add(table2_led)
+
+# Horizontal wrap-around LED rings on Table 2
+num_wraps = 3
+wrap_height = led_height
+wrap_spacing = (table2_height - 0.05 - led_height) / (num_wraps + 1)
+
+for i in range(1, num_wraps+1):
+    wrap_z = led_height + wrap_spacing * i
+    wrap_ring = Cuboid(
+        scale=[table2_length + led_margin*2, table2_width + led_margin*2, wrap_height],
+        color=led_color,
+        pose=SE3(0, table2_center_y, wrap_z)
+    )
+    env.add(wrap_ring)
 
 # ----------------------------------------------------
-# III. ROBOT INSTANTIATION & PLACEMENT
+# V. ROBOT INSTANTIATION & PLACEMENT
 # ----------------------------------------------------
 
-# --- Robot 1: Glass & Ice Handler ---
+# Robot 1: Glass & Ice Handler
 robot1 = Glassbot()
-# Set the base transform for R1 (if not at origin, use SE3.T)
 robot1.base = ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
 
-# --- Robot 2: Alcohol Pourer ---
+
+# Robot 2: Alcohol Pourer
 robot2 = Drinkbot()
+robot2.q = robot2.home_q
 robot2.base = ROBOT_BASE_POSES["R2_ALCOHOL"]
 robot2.add_to_env(env)
 
-# --- Robot 3: Mixer Adder ---
+# Robot 3: Mixer Adder
 robot3 = IngredientBot()
+robot3.q = robot3.home_q
 robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
-# --- Robot 4: Server (PLACEHOLDER) ---
+# Robot 4: Server (placeholder)
 # robot4 = Drinkbot4()
 # robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
 # robot4.add_to_env(env)
 
-# Store all robots in a dictionary for easy access
-# ROBOTS = {
-#     "R1": robot1, 
-#     "R2": robot2, 
-#     "R3": robot3, 
-#     "R4": robot4
-# }
-
-
 # ----------------------------------------------------
-# IV. ENVIRONMENT OBJECT DEFINITION
+# VI. OBJECT DEFINITIONS (Glass, Ice Dispenser, etc.)
 # ----------------------------------------------------
 
 # --- 1. Glass Mesh ---
@@ -127,127 +232,8 @@ env.add(ice_dispenser)
 # SERVE_AREA = Cuboid(scale=[...], pose=SE3(...), color=[0.5, 0.5, 0.5, 0.5])
 # env.add(SERVE_AREA)
 
-
-# --- 6. Floor and walls ---
-
-wall_height = 2.5      # metres
-wall_thickness = 0.05  # metres
-
-# --- Floor ---
-floor = Cuboid(scale=[5, 3, 0.02],
-               color=[0.25, 0.3, 0.35, 1],
-               pose=SE3(0, 0, 0.01))   # raised slightly to avoid flicker
-env.add(floor)
-
-# --- Back Wall (5m long) ---
-back_wall = Cuboid(scale=[5, wall_thickness, wall_height],
-                   color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(0, -1.5, wall_height/2))
-env.add(back_wall)
-
-# --- Left Wall (3m long) ---
-left_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
-                   color=[0.85, 0.85, 0.9, 1],
-                   pose=SE3(-2.5, 0, wall_height/2))
-env.add(left_wall)
-
-# --- Right Wall (3m long) ---
-right_wall = Cuboid(scale=[wall_thickness, 3, wall_height],
-                    color=[0.85, 0.85, 0.9, 1],
-                    pose=SE3(2.5, 0, wall_height/2))
-env.add(right_wall)
-
-# --- 7. Futuristic Tables with 3 Horizontal Wrap LEDs on Table 2 ---
-
-# Common colors
-base_color  = [0.1, 0.1, 0.15, 1]     # dark graphite / base
-top_color   = [0.0, 0.6, 0.8, 1]      # neon cyan top
-top_glow_color = [0.0, 0.8, 1.0, 0.3] # semi-transparent top glow
-led_color   = [0.0, 0.8, 1.0, 0.6]    # bright cyan LED
-led_height  = 0.05                     # LED thickness
-led_offset  = 0.01                     # slightly above floor
-led_margin  = 0.02                     # tiny extension beyond table edges
-
-# --- Table 1 (large table, unchanged) ---
-table1_length = 3.0
-table1_width  = 0.75
-table1_height = 1.0
-table1_offset_from_wall = 0.5
-table1_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table1_width / 2
-
-# Base
-table1_base = Cuboid(scale=[table1_length, table1_width, table1_height - 0.05],
-                     color=base_color,
-                     pose=SE3(0, table1_center_y, (table1_height - 0.05)/2))
-env.add(table1_base)
-
-# Tabletop
-table1_top = Cuboid(scale=[table1_length, table1_width, 0.05],
-                    color=top_color,
-                    pose=SE3(0, table1_center_y, table1_height - 0.025))
-env.add(table1_top)
-
-# Top glow
-table1_glow = Cuboid(scale=[table1_length*1.05, table1_width*1.05, 0.02],
-                     color=top_glow_color,
-                     pose=SE3(0, table1_center_y, table1_height - 0.015))
-env.add(table1_glow)
-
-# Base LED (slightly wider than table)
-table1_led = Cuboid(scale=[table1_length + led_margin*2, table1_width + led_margin*2, led_height],
-                    color=led_color,
-                    pose=SE3(0, table1_center_y, (led_height/2)+led_offset))
-env.add(table1_led)
-
-# --- Table 2 (smaller table with horizontal wrap LEDs) ---
-table2_length = 1.5
-table2_width  = 0.7
-table2_height = 1.0
-table2_spacing = 1.0
-table2_center_y = table1_center_y + (table1_width/2) + table2_spacing + (table2_width/2)
-
-# Base
-table2_base = Cuboid(scale=[table2_length, table2_width, table2_height - 0.05],
-                     color=base_color,
-                     pose=SE3(0, table2_center_y, (table2_height - 0.05)/2))
-env.add(table2_base)
-
-# Tabletop
-table2_top = Cuboid(scale=[table2_length, table2_width, 0.05],
-                    color=top_color,
-                    pose=SE3(0, table2_center_y, table2_height - 0.025))
-env.add(table2_top)
-
-# Top glow
-table2_glow = Cuboid(scale=[table2_length*1.05, table2_width*1.05, 0.02],
-                     color=top_glow_color,
-                     pose=SE3(0, table2_center_y, table2_height - 0.015))
-env.add(table2_glow)
-
-# Base LED (slightly wider than table)
-table2_led = Cuboid(scale=[table2_length + led_margin*2, table2_width + led_margin*2, led_height],
-                    color=led_color,
-                    pose=SE3(0, table2_center_y, (led_height/2)+led_offset))
-env.add(table2_led)
-
-# --- Horizontal wrap-around LED rings on Table 2 ---
-num_wraps = 3
-wrap_height = led_height
-# Evenly spaced from top of base LED to just below tabletop
-wrap_spacing = (table2_height - 0.05 - led_height) / (num_wraps + 1)
-
-for i in range(1, num_wraps+1):
-    wrap_z = led_height + wrap_spacing * i  # start from top of base LED
-    wrap_ring = Cuboid(
-        scale=[table2_length + led_margin*2, table2_width + led_margin*2, wrap_height],
-        color=led_color,
-        pose=SE3(0, table2_center_y, wrap_z)
-    )
-    env.add(wrap_ring)
-
-
 # ----------------------------------------------------
-# V. GRIPPER VISUALS & LOGIC (Needs Refactoring for Multi-Robot)
+# VII. GRIPPER VISUALS & LOGIC (Needs Refactoring for Multi-Robot)
 # ----------------------------------------------------
 
 # --- Gripper Visual Meshes (Attached to Robot 1) ---
@@ -336,7 +322,7 @@ _update_fingers(robot1, left_finger_r1, right_finger_r1, _finger_gap_r1)
 
 
 # ----------------------------------------------------
-# VI. MOVEMENT HELPERS (IK & Trajectory)
+# VIII. MOVEMENT HELPERS (IK & Trajectory)
 # ----------------------------------------------------
 
 def wrap_to_near(q_goal, q_ref):
@@ -440,7 +426,7 @@ def cartesian_place_and_release_safe(robot, q_current, tcp_orientation_SE3, plac
     return q_now
 
 # ----------------------------------------------------
-# VII. MULTI-ROBOT POSE DEFINITIONS
+# IX. MULTI-ROBOT POSE DEFINITIONS
 # ----------------------------------------------------
 
 # --- A. Shared Poses & Robot 1 (Ice/Glass) Poses ---
@@ -483,7 +469,7 @@ HANDOVER_1_COORDS = (glass_posex, glass_posey) # R1 drops glass, R2 picks it up 
 
 
 # ----------------------------------------------------
-# VIII. COOPERATIVE SEQUENCE LOGIC (Multi-Robot Task Execution)
+# X. COOPERATIVE SEQUENCE LOGIC (Multi-Robot Task Execution)
 # ----------------------------------------------------
 
 q_now_r1 = q_home_r1.copy()
@@ -584,7 +570,8 @@ time.sleep(1.0)
 
 
 # ----------------------------------------------------
-# IX. EXECUTION & HOLD
+# XI. EXECUTION & HOLD
 # ----------------------------------------------------
 
 env.hold()
+
