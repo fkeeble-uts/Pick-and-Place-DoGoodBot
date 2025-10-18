@@ -4,6 +4,7 @@ import swift
 from spatialmath import SE3
 import roboticstoolbox as rtb
 from spatialgeometry import Cylinder, Cuboid, Box
+from robot_helpers import RobotController
 from math import pi
 
 from Drinkbot import Drinkbot
@@ -18,6 +19,7 @@ env.launch(realtime=True)
 env.set_camera_pose([0, 3, 4], [0, 0, 0.5])
 
 scene = Scene(env)
+controller = RobotController(env, scene)
 
 # ----------------------------------------------------
 # ROBOT CREATION & PLACEMENT
@@ -48,38 +50,6 @@ robot4.add_to_env(env)
 # ============================================================================
 # HELPER FUNCTiONS
 # ============================================================================
-
-def wrap_to_near(q_goal, q_ref):
-    """Wrap joint angles to nearest equivalent to reference."""
-    return q_ref + (q_goal - q_ref + np.pi) % (2 * np.pi) - np.pi
-
-def move_to_q(robot, q_target, steps=scene.TRAJ_STEPS, name="", carry_object=None):
-    """Move robot to target joint angles, optionally carrying an object."""
-    q_start = robot.q.copy()
-    q_target = wrap_to_near(q_target, q_start)
-    
-    print(f"[{robot.name}] Moving to {name}...")
-    trajectory = rtb.jtraj(q_start, q_target, steps)
-    
-    for q in trajectory.q:
-        robot.q = q
-        
-        if carry_object is not None:
-            T_tcp = robot.fkine(q)
-            carry_object.T = T_tcp.A
-        
-        env.step(scene.SIM_STEP_TIME)
-    
-    print(f"✓ {name}")
-    return q_target
-
-def print_pose(robot, label=""):
-    """Print current pose info."""
-    print(f"\n{label}")
-    q_deg = np.round(np.rad2deg(robot.q), 2)
-    T = robot.fkine(robot.q)
-    print(f"  Joints (deg): {q_deg}")
-    print(f"  TCP Pos: {np.round(T.t, 3)}")
 
 # ============================================================================
 # SAVED JOINT POSES FROM TEACH MODE
@@ -126,20 +96,20 @@ held_by_r2 = False
 
 q_now_r1 = R1_POSES["HOME"]
 robot1.q = q_now_r1
-print_pose(robot1, "R1 at HOME")
+controller.print_pose(robot1, "R1 at HOME")
 time.sleep(0.5)
 
 # Step 1: Approach glass
 print("\n[R1] Approaching glass...")
-q_now_r1 = move_to_q(robot1, R1_POSES["GLASS_APPROACH"], steps=50, name="Glass Approach")
-print_pose(robot1, "R1 at GLASS_APPROACH")
+q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_APPROACH"], steps=50, name="Glass Approach")
+controller.print_pose(robot1, "R1 at GLASS_APPROACH")
 time.sleep(0.5)
 
 # Step 2: Move to glass level
 print("\n[R1] Moving to glass pickup position...")
-q_now_r1 = move_to_q(robot1, R1_POSES["GLASS_PICKUP"], steps=40, name="Glass Pickup", 
+q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_PICKUP"], steps=40, name="Glass Pickup", 
                       carry_object=target_glass)
-print_pose(robot1, "R1 at GLASS_PICKUP")
+controller.print_pose(robot1, "R1 at GLASS_PICKUP")
 time.sleep(0.5)
 
 # Step 3: Simulate gripper closing
@@ -149,24 +119,24 @@ time.sleep(0.5)
 
 # Step 4: Lift glass
 print("\n[R1] Lifting glass...")
-q_now_r1 = move_to_q(robot1, R1_POSES["LIFT_CLEAR"], steps=40, name="Lift Clear",
+q_now_r1 = controller.move_to_q(robot1, R1_POSES["LIFT_CLEAR"], steps=40, name="Lift Clear",
                       carry_object=target_glass)
-print_pose(robot1, "R1 at LIFT_CLEAR")
+controller.print_pose(robot1, "R1 at LIFT_CLEAR")
 time.sleep(0.5)
 
 # Step 5: Move to ice machine
 print("\n[R1] Moving to ice machine...")
-q_now_r1 = move_to_q(robot1, R1_POSES["ICE_MACHINE"], steps=60, name="Ice Machine",
+q_now_r1 = controller.move_to_q(robot1, R1_POSES["ICE_MACHINE"], steps=60, name="Ice Machine",
                       carry_object=target_glass)
-print_pose(robot1, "R1 at ICE_MACHINE")
+controller.print_pose(robot1, "R1 at ICE_MACHINE")
 print("[R1] Simulating ice fill...")
 time.sleep(1.0)
 
 # Step 6: Move to handoff location
 print("\n[R1] Moving to handoff location...")
-q_now_r1 = move_to_q(robot1, R1_POSES["HANDOFF"], steps=60, name="Handoff",
+q_now_r1 = controller.move_to_q(robot1, R1_POSES["HANDOFF"], steps=60, name="Handoff",
                       carry_object=target_glass)
-print_pose(robot1, "R1 at HANDOFF")
+controller.print_pose(robot1, "R1 at HANDOFF")
 time.sleep(0.5)
 
 # ============================================================================
@@ -189,9 +159,9 @@ print(scene.drink_poses[3]-scene.ROBOT_BASE_POSES["R2_ALCOHOL"])
 
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
-q_now_r2 = move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
+q_now_r2 = controller.move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
                       carry_object=None)
-print_pose(robot1, "R2 at Drink 4")
+controller.print_pose(robot1, "R2 at Drink 4")
 time.sleep(0.5)
 
 env.hold()
