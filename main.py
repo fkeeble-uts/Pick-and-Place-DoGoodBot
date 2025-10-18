@@ -74,6 +74,13 @@ glass_table_height = 1.05
 glass_table_center_x = table1_length/2 + glass_table_length/2 + 0.1  # just left of Table 1
 glass_table_center_y = table1_center_y
 
+# Ingredients table (for ingredients - mirrored on opposite side)
+ingredients_table_length = 0.4
+ingredients_table_width  = 0.7
+ingredients_table_height = 1.05
+ingredients_table_center_x = -(table1_length/2 + ingredients_table_length/2 + 0.1)  # mirrored on right of Table 1
+ingredients_table_center_y = table1_center_y
+
 # Emergency stop button
 button_center_x = 0.5  # along table length
 button_center_y = table2_center_y + table2_width / 2 - 0.1  # near the front edge
@@ -168,6 +175,14 @@ tables = [
         "height": table3_height,
         "center": SE3(0, table3_center_y, 0),
         "leds": False  # no LEDs on back table
+    },
+    {
+       "name": "Ingredients Table",
+        "length": ingredients_table_length,
+        "width": ingredients_table_width,
+        "height": ingredients_table_height,
+        "center": SE3(ingredients_table_center_x, ingredients_table_center_y, 0),
+        "leds": True  # no LEDs on back table 
     }
 ]
 
