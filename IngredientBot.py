@@ -44,7 +44,8 @@ class IngredientBot(DHRobot3D):
         ])
         self.qlim = np.deg2rad(qlim_deg)
 
-        self.q = qtest
+        self.home_q = [-pi/2, 0, 0, 0, 0, 0]
+        self.q = self.home_q
 
     def _create_DH(self):
         links = []

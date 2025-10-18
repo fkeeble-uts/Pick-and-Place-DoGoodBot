@@ -53,7 +53,9 @@ class Drinkbot(DHRobot3D):
         ])
         self.qlim = np.deg2rad(qlim_deg)
 
-        self.q = qtest
+        self.home_q = [pi, 0, 0, 0, 0, 0]
+        self.q = self.home_q
+        
 
     # ----------------------------------------------------
     # III. KINEMATICS IMPLEMENTATION (DH Parameters)
@@ -67,8 +69,7 @@ class Drinkbot(DHRobot3D):
         offset = [0, -pi/2, 0, pi/2, 0, 0, 0]
         for i in range(6): 
             links.append(rtb.RevoluteDH(d=d[i], a=a[i], alpha=alpha[i], offset=offset[i]))
-        return links
-
+        return links                
     # ----------------------------------------------------
     # IK. HELPER FUNCTIONS
     # ----------------------------------------------------

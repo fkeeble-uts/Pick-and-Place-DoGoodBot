@@ -32,7 +32,7 @@ class Glassbot(DHRobot3D):
         )
 
         # Reference test joint config
-        qtest = [0, 0, 0, 0, 0, 0]
+        qtest = [pi/2, 0, 0, 0, 0, 0]
 
         # Alignment transforms for meshes (adjust manually until they sit correctly!)
         qtest_transforms = [
