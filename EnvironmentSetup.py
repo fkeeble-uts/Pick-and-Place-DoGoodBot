@@ -7,8 +7,8 @@ class Scene:
     A class to hold all configuration variables for the simulation environment.
     """
     def __init__(self, env):
-
         self.env = env
+
         # ----------------------------------------------------
         # CONSTANTS & CONFIGURATION
         # ----------------------------------------------------
@@ -39,7 +39,7 @@ class Scene:
         self._finger_gap_r1 = self.FINGER_GAP_OPEN
 
         # ----------------------------------------------------
-        # II. SWIFT OBJECT PARAMETERS
+        # SWIFT OBJECT PARAMETERS
         # ----------------------------------------------------
 
         self.wall_height = 2.5
