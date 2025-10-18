@@ -7,7 +7,7 @@ from spatialgeometry import Cylinder, Cuboid, Box
 from math import pi
 
 from Drinkbot import Drinkbot
-from Ingredientbot import IngredientBot
+from IngredientBot import IngredientBot
 from Glassbot import Glassbot
 
 # ----------------------------------------------------
