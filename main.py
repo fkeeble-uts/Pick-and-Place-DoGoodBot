@@ -66,7 +66,7 @@ table3_length = 4.0
 table3_width  = 0.75
 table3_height = 1.5
 table3_offset_from_wall = 0
-table3_center_y = -1.5 + wall_thickness + table1_offset_from_wall + table3_width / 2
+table3_center_y = -3 + wall_thickness + table1_offset_from_wall + table3_width / 2
 
 # Glass table (for cups)
 glass_table_length = 0.4
@@ -167,7 +167,7 @@ tables = [
         "length": table3_length,
         "width": table3_width,
         "height": table3_height,
-        "center": SE3(0, table3_center_y - 1.5, 0),
+        "center": SE3(0, table3_center_y, 0),
         "leds": False  # no LEDs on back table
     }
 ]
@@ -294,6 +294,25 @@ for yf in width_fractions:
                          pose=SE3(x_pos, y_pos, z_pos))  # no rotation, upright along z
         env.add(glass)
         glass_objects.append(glass)
+
+# --- Drinks on drink shelf ---
+# Drink parameters
+drink_radius = 0.05  # radius of drink
+drink_height = 0.2    # height of drink
+drink_color = [0, 0, 0.4, 0.7]  # bright, slightly transparent
+
+drink_count = 9
+drink_gaps = (2 - drink_radius) / drink_count + 0.03
+
+for i in range(drink_count):
+    # Create Cylinder standing upright
+    drink = Cylinder(radius=drink_radius,
+                     length=drink_height,
+                     color=drink_color,
+                     pose=SE3(1 - drink_gaps * i, table3_center_y, 
+                              table3_height + drink_height/2))  # no rotation, upright along z
+    env.add(drink)
+    print("Added drink at location: ", 1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2)
 
 # --- 3. Alcohol Bottle (PLACEHOLDER for R2) ---
 # ALCOHOL_POSE = SE3(x, y, z) 
