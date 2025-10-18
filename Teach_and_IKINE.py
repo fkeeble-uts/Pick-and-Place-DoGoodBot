@@ -449,6 +449,7 @@ if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "Drinkbot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
     RUN_IKINE = True  # False for sliders, True for IK test
+    RUN_IKINE = True  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "IngredientBot":
