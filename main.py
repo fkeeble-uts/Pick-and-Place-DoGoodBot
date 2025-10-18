@@ -9,6 +9,7 @@ from math import pi
 from Drinkbot import Drinkbot
 from Ingredientbot import IngredientBot
 from Glassbot import Glassbot
+from Serverbot import Serverbot
 
 # ----------------------------------------------------
 # I. CONSTANTS & CONFIGURATION
@@ -183,7 +184,7 @@ tables = [
         "width": ingredients_table_width,
         "height": ingredients_table_height,
         "center": SE3(ingredients_table_center_x, ingredients_table_center_y, 0),
-        "leds": True  # no LEDs on back table 
+        "leds": True  
     }
 ]
 
@@ -270,9 +271,9 @@ robot3.base = ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
 # Robot 4: Server (placeholder)
-# robot4 = Drinkbot4()
-# robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
-# robot4.add_to_env(env)
+robot4 = Serverbot()
+robot4.base = ROBOT_BASE_POSES["R4_SERVER"]
+robot4.add_to_env(env)
 
 # ----------------------------------------------------
 # VI. OBJECT DEFINITIONS (Glass, Ice Dispenser, etc.)
@@ -328,6 +329,84 @@ for i in range(drink_count):
                               table3_height + drink_height/2))  # no rotation, upright along z
     env.add(drink)
     print("Added drink at location: ", 1 - drink_gaps * i, table3_center_y, table3_height + drink_height/2)
+
+# ----------------------------------------------------
+# VI. INGREDIENTS TABLE OBJECTS (Chopping Boards + Cubes)
+# ----------------------------------------------------
+
+# --- Adjustable Parameters ---
+
+# Chopping board dimensions
+board_length = 0.3
+board_width  = 0.185
+board_height = 0.02
+
+# Cube (ingredient) dimensions
+cube_size = 0.025
+cube_spacing_x = 0.07
+cube_spacing_y = 0.035
+cube_height_offset = board_height/2 + cube_size/2   # sits just above board
+
+# Colors
+board_color = [1.0, 1.0, 1.0, 1.0]   # pure white boards
+cube_colors = {
+    "yellow": [1.0, 1.0, 0.0, 1.0],
+    "green":  [0.0, 1.0, 0.0, 1.0],
+    "blue":   [0.0, 0.0, 1.0, 1.0],
+}
+
+# Positioning offsets (fractions of table surface)
+# Define 3 boards across the table width (front, middle, back)
+board_fractions_y = [0.2, 0.5, 0.8]
+board_center_x_fraction = 0.5  # centered along table length
+
+ingredient_objects = []
+cube_objects = []
+
+for i, yf in enumerate(board_fractions_y):
+    # Compute chopping board world position
+    x_pos = (ingredients_table_center_x - ingredients_table_length/2
+             + board_center_x_fraction * ingredients_table_length)
+    y_pos = (ingredients_table_center_y - ingredients_table_width/2
+             + yf * ingredients_table_width)
+    z_pos = ingredients_table_height + board_height / 2  # sits on table
+
+    # Create chopping board (Cuboid)
+    board = Cuboid(
+        scale=[board_length, board_width, board_height],
+        color=board_color,
+        pose=SE3(x_pos, y_pos, z_pos)
+    )
+    env.add(board)
+    ingredient_objects.append(board)
+
+    # 3x3 grid of cubes on each board
+    color_key = list(cube_colors.keys())[i]
+    cube_color = cube_colors[color_key]
+
+    total_grid_size_x = 3 * cube_size + 2 * cube_spacing_x
+    total_grid_size_y = 3 * cube_size + 2 * cube_spacing_y
+    x_start = x_pos - total_grid_size_x / 2 + cube_size / 2
+    y_start = y_pos - total_grid_size_y / 2 + cube_size / 2
+
+    for row in range(3):
+        for col in range(3):
+            cube_x = x_start + col * (cube_size + cube_spacing_x)
+            cube_y = y_start + row * (cube_size + cube_spacing_y)
+            cube_z = z_pos + cube_height_offset
+
+            cube = Cuboid(
+                scale=[cube_size, cube_size, cube_size],
+                color=cube_color,
+                pose=SE3(cube_x, cube_y, cube_z)
+            )
+            env.add(cube)
+            ingredient_objects.append(cube)
+            cube_objects.append(cube)
+
+    print(f"Added 3x3 grid of {color_key} cubes on board {i+1} at ({x_pos:.2f}, {y_pos:.2f})")
+
+print(f"Total cubes: {len(cube_objects)}")
 
 # --- 3. Alcohol Bottle (PLACEHOLDER for R2) ---
 # ALCOHOL_POSE = SE3(x, y, z) 
