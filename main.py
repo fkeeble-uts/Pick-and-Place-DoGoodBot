@@ -112,21 +112,17 @@ R3_POSES = {
 }
 
 # ============================================================================
-# GLASS OBJECT TRACKING
-# ============================================================================
-
-glass_index = 4  # Use middle glass
-target_glass = scene.glass_objects[glass_index]
-held_by_r1 = False
-held_by_r2 = False
-
-# ============================================================================
 # ROBOT 1 SEQUENCE - PICK AND PLACE GLASS
 # ============================================================================
 
 print("\n" + "="*70)
 print(">>> ROBOT 1: PICKING UP GLASS <<<")
 print("="*70 + "\n")
+
+glass_index = 4  # Use middle glass
+target_glass = scene.glass_objects[glass_index]
+held_by_r1 = False
+held_by_r2 = False
 
 q_now_r1 = R1_POSES["HOME"]
 robot1.q = q_now_r1
