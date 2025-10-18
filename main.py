@@ -108,7 +108,7 @@ ROBOT_BASE_POSES = {
     "R1_ICE_GLASS": SE3(1.6, table1_center_y, table1_height + floor_height),
     "R2_ALCOHOL":   SE3(0.0, table1_center_y, table1_height + floor_height),
     "R3_MIXERS":    SE3(-1.6, table1_center_y, table1_height + floor_height),
-    "R4_SERVER":    SE3(0.0, table2_center_y, table2_height + floor_height),
+    "R4_SERVER":    SE3(0.2, table2_center_y, table2_height + floor_height),
 }
 
 # ----------------------------------------------------

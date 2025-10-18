@@ -30,13 +30,6 @@ class Serverbot(DHRobot3D):
         current_path = os.path.abspath(os.path.dirname(__file__))
         link3d_path = os.path.join(current_path, "assets")  # Correct folder
 
-        # Optional: verify files exist
-        for i in range(8):
-            filename = f"{link3D_names[f'link{i}']}.stl"
-            filepath = os.path.join(link3d_path, filename)
-            if not os.path.exists(filepath):
-                print(f"Warning: STL file not found: {filepath}")
-
         # Reference configuration and STL alignment transforms
         qtest = [0, 0, -pi / 2, 0, 0, 0, 0]
         qtest_transforms = [
