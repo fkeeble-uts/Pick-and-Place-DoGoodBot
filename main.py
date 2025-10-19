@@ -48,10 +48,6 @@ robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
 robot4.add_to_env(env)
 
 # ============================================================================
-# HELPER FUNCTiONS
-# ============================================================================
-
-# ============================================================================
 # SAVED JOINT POSES FROM TEACH MODE
 # ============================================================================
 
@@ -99,6 +95,8 @@ robot1.q = q_now_r1
 controller.print_pose(robot1, "R1 at HOME")
 time.sleep(0.5)
 
+# quoting out r1 movement temporarily to debug r2 movement
+'''
 # Step 1: Approach glass
 print("\n[R1] Approaching glass...")
 q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_APPROACH"], steps=50, name="Glass Approach")
@@ -138,6 +136,7 @@ q_now_r1 = controller.move_to_q(robot1, R1_POSES["HANDOFF"], steps=60, name="Han
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at HANDOFF")
 time.sleep(0.5)
+'''
 
 # ============================================================================
 # ROBOT 2 SEQUENCE - ADD ALCOHOL TO GLASS
@@ -159,9 +158,13 @@ print(scene.drink_poses[3]-scene.ROBOT_BASE_POSES["R2_ALCOHOL"])
 
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
-q_now_r2 = controller.move_to_q(robot2, R2_POSES["PICKUP_DRINK"], steps=60, name="Drink4",
-                      carry_object=None)
-controller.print_pose(robot1, "R2 at Drink 4")
-time.sleep(0.5)
+target_r2_pose = scene.drink_poses[3] @ SE3.Rx(pi/2)
+hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_POSES["PICKUP_DRINK"], "y", False, 0.5)
+controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60, carry_object=None)
+controller.print_pose(robot2, "R2 at Hover before Drink 4")
+if success:
+    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+else:
+    print("Unable to move robot2 to hover pose")
 
 env.hold()
