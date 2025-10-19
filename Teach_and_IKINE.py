@@ -10,7 +10,7 @@ from spatialgeometry import Cylinder, Cuboid, Box
 # --- Import all robot classes ---
 from IngredientBot import IngredientBot
 from DrinkBot import DrinkBot
-from Glassbot import Glassbot
+from GlassBot import GlassBot
 from Serverbot import Serverbot
 
 # Log config
@@ -341,7 +341,7 @@ for i, yf in enumerate(board_fractions_y):
 # ============================================================================
 
 # Robot 1: Glass & Ice Handler
-robot1 = Glassbot()
+robot1 = GlassBot()
 robot1.base = ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
 
