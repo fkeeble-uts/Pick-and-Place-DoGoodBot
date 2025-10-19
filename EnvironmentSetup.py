@@ -52,10 +52,10 @@ class Scene:
         self.table1_center_y = -1.5 + self.wall_thickness + table1_offset_from_wall + self.table1_width / 2
 
         # Table 2 (smaller / front table)
-        self.table2_length = 1.5
-        self.table2_width  = 0.7
+        self.table2_length = 0.3
+        self.table2_width  = 0.8
         self.table2_height = 1.0
-        table2_spacing = 1.0
+        table2_spacing = 0.6
         self.table2_center_y = self.table1_center_y + (self.table1_width / 2) + table2_spacing + (self.table2_width / 2)
 
         # Table 3 (drinks shelf)
@@ -78,9 +78,23 @@ class Scene:
         self.ingredients_table_center_x = -(self.table1_length/2 + self.ingredients_table_length/2 + 0.1)
         self.ingredients_table_center_y = self.table1_center_y
 
+        # Serving Pedestals 
+        self.pedestal_length = 0.2
+        self.pedestal_width = 0.2
+        self.pedestal_height = 1.0
+        self.pedestal_x_offset = 0.5
+        self.pedestal_y_offset = 0.5
+
+        # Control Desk
+        self.control_desk_length = 0.6
+        self.control_desk_width  = 0.8
+        self.control_desk_height = 1.0
+        self.control_desk_center_x = 2.7
+        self.control_desk_center_y = self.table2_center_y
+
         # Emergency stop button
-        self.button_center_x = 0.5
-        self.button_center_y = self.table2_center_y + self.table2_width / 2 - 0.1
+        self.button_center_x = self.control_desk_center_x - 0.2
+        self.button_center_y = self.table2_center_y + self.control_desk_width / 2 - 0.1
         self.button_center_z = self.table2_height + self.BUTTON_BASE_HEIGHT / 2 -0.01
 
         # LED / colour parameters
@@ -101,7 +115,7 @@ class Scene:
             "R1_ICE_GLASS": SE3(1.6, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
             "R2_ALCOHOL":   SE3(0.0, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
             "R3_MIXERS":    SE3(-1.6, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
-            "R4_SERVER":    SE3(0, float(self.table2_center_y), float(self.table2_height + self.floor_height)),
+            "R4_SERVER":    SE3(0, float(self.table2_center_y+ 0.3), float(self.table2_height + self.floor_height)),
         }
 
         # ----------------------------------------------------
@@ -134,7 +148,10 @@ class Scene:
             {"name": "UR3e Table", "length": self.table2_length, "width": self.table2_width, "height": self.table2_height, "center": SE3(0, self.table2_center_y, 0), "leds": True},
             {"name": "Glass Table", "length": self.glass_table_length, "width": self.glass_table_width, "height": self.glass_table_height, "center": SE3(self.glass_table_center_x, self.glass_table_center_y, 0), "leds": True},
             {"name": "Drinks Shelf", "length": self.table3_length, "width": self.table3_width, "height": self.table3_height, "center": SE3(0, self.table3_center_y, 0), "leds": False},
-            {"name": "Ingredients Table", "length": self.ingredients_table_length, "width": self.ingredients_table_width, "height": self.ingredients_table_height, "center": SE3(self.ingredients_table_center_x, self.ingredients_table_center_y, 0), "leds": True}
+            {"name": "Ingredients Table", "length": self.ingredients_table_length, "width": self.ingredients_table_width, "height": self.ingredients_table_height, "center": SE3(self.ingredients_table_center_x, self.ingredients_table_center_y, 0), "leds": True},
+            {"name": "Serving Pedestal Left", "length": self.pedestal_length, "width": self.pedestal_width, "height": self.pedestal_height,"center": SE3(-self.pedestal_x_offset, self.table2_center_y + self.pedestal_y_offset, 0), "leds": True},
+            {"name": "Serving Pedestal Right", "length": self.pedestal_length, "width": self.pedestal_width, "height": self.pedestal_height,"center": SE3(self.pedestal_x_offset, self.table2_center_y + self.pedestal_y_offset, 0), "leds": True},
+            {"name": "Control Desk", "length": self.control_desk_length, "width": self.control_desk_width, "height": self.control_desk_height, "center": SE3(self.control_desk_center_x, self.control_desk_center_y, 0), "leds": False},    
         ]
 
         for i, t in enumerate(tables):
