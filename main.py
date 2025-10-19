@@ -87,27 +87,39 @@ print("\n" + "="*70)
 print(">>> ROBOT 1: PICKING UP GLASS <<<")
 print("="*70 + "\n")
 
-glass_index = 3  # Use middle glass closest to glassbot
+glass_index = 3 
 target_glass = scene.glass_objects[glass_index]
-held_by_r1 = False
-held_by_r2 = False
 
-q_now_r1 = R1_GUESSES["HOME"]
-robot1.q = q_now_r1
+robot1.q = R1_GUESSES["HOME"]
 controller.print_pose(robot1, "R1 at HOME")
 time.sleep(0.5)
 
-# Step 1: Place R1 EE on top of glass
-print("\n[R1] Approaching glass...")
-target_r1_pose = scene.glass_poses[3] @ SE3.Tz(scene.glass_height/2) @ SE3.Ry(pi)
-print(target_r1_pose)
-hover_q_r1, success = controller.find_ikine(robot1, target_r1_pose, R1_GUESSES["GLASS_PICKUP"], "z", False, 0.5)
-controller.animate_trajectory(robot1, robot1.q, hover_q_r1, steps=60, carry_object=None)
-controller.print_pose(robot1, "R1 at hover over glass 3")
+# Step 1: Move to a hover position above the glass
+print("\n[R1] Moving to hover above glass...")
+# Target the center of the glass, but with a vertical offset for the TCP
+target_hover_pose = scene.glass_poses[glass_index] @ SE3.Tz(0.2) @ SE3.Ry(pi)
+q_hover, success = controller.find_ikine(robot1, target_hover_pose, R1_GUESSES["GLASS_APPROACH"])
+
 if success:
-    controller.move_cartesian(robot1, robot1.q, target_r1_pose, 50)
-else:
-    print("Unable to move robot1 to hover pose")
+    controller.move_to_q(robot1, q_hover, name="Glass Hover")
+
+    # Step 2: Move down to the grasping position
+    print("\n[R1] Moving to grasp position...")
+    target_grasp_pose = scene.glass_poses[glass_index] @ SE3.Tz(scene.glass_height / 2) @ SE3.Ry(pi)
+    controller.move_cartesian(robot1, robot1.q, target_grasp_pose, 50)
+    controller.print_pose(robot1, "R1 at Grasp Position")
+    
+    # Step 3: PICK UP the object
+    # This calculates and stores the grasp transform
+    controller.pickup_object(robot1, target_glass)
+    time.sleep(1) # Simulate gripper closing
+    
+    # Step 4: Lift the glass vertically
+    print("\n[R1] Lifting glass...")
+    lift_pose = robot1.fkine(robot1.q) @ SE3.Tz(-0.2)
+    # The glass will now move correctly because the controller is handling it
+    controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
+    controller.print_pose(robot1, "R1 Lifted Glass")
 
 '''
 # Step 2: Move to glass level
@@ -162,9 +174,8 @@ for i in range(len(scene.glass_poses)):
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
 target_r2_pose = scene.drink_poses[3] @ SE3.Ty(scene.drink_radius) @ SE3.Rx(pi/2)
-print(target_r2_pose)
 hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_GUESSES["PICKUP_DRINK"], "y", False, 0.5)
-controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60, carry_object=None)
+controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
 controller.print_pose(robot2, "R2 at Hover before Drink 4")
 if success:
     controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
