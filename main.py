@@ -66,6 +66,9 @@ R1_GUESSES = {
 R2_GUESSES = {
     "HOME": robot2.q.copy(),
     "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
+    "PRE_POUR_AWAY": np.deg2rad(np.array([0, 142.39, -64.67, 0, 66.05, -77.03])),
+    "POUR_HOVER": np.deg2rad(np.array([-0.55, 133.68, -32.24, -0.57, 104.09, -89.86])),
+    "POUR_DRINK": np.deg2rad(np.array([0, 116, -31, 0, 240, -90])),
     "PLACE_GLASS": np.deg2rad(np.array([0, 25.495, 174.686, 0, -208, 0]))    # Position to place drink
 }
 
@@ -78,6 +81,7 @@ R3_GUESSES = {
     "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([0, 0, 0, 0, 0, 0]))    # glass drop off position where i will add ingredients
 }
 
+'''
 # ============================================================================
 # ROBOT 1 SEQUENCE - PICK AND PLACE GLASS
 # ============================================================================
@@ -140,11 +144,11 @@ if success:
     controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
     controller.print_pose(robot1, "R1 Lifted Glass")
     controller.animate_trajectory(robot1, robot1.q, np.zeros(6), steps=60)
+'''
 
 # ============================================================================
 # ROBOT 2 SEQUENCE - ADD ALCOHOL TO GLASS
 # ============================================================================
-
 print("\n" + "="*70)
 print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
@@ -152,23 +156,65 @@ print("="*70 + "\n")
 drink_index = 3 
 target_drink = scene.drink_objects[drink_index]
 
-# Step 7: Move to drink 4
-print("\n[R2] Moving to drink 4...")
+# Step 7: Approach and move to the drink
+print("\n[R2] Approaching drink...")
 target_r2_pose = scene.drink_poses[drink_index] @ SE3.Ty(scene.drink_radius) @ SE3.Rx(pi/2)
 hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_GUESSES["PICKUP_DRINK"], "y", False, 0.5)
 controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
-controller.print_pose(robot2, "R2 at Hover before Drink 4")
-if success:
-    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
-else:
-    print("Unable to move robot2 to hover pose")
+controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
 
-# Step 8: Pick up drink 4
+# Step 8: Pick up the drink
 controller.pickup_object(robot2, target_drink)
 
-# Step 9: Retract drinkbot away from wall while holding drink
-print("\n[R2] Moving away from wall..")
-target_r2_pose = robot2.fkine(robot2.q) @ SE3.Tz(-0.2)
-controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+# Step 9: Retract from the wall
+print("\n[R2] Retracting from shelf...")
+retract_pose = robot2.fkine(robot2.q) @ SE3.Tz(-0.2)
+controller.move_cartesian(robot2, robot2.q, retract_pose, 50)
+controller.print_pose(robot2, "R2 Retracted")
+
+# Step 10: Move to an intermediate position
+print("\n[R2] Swinging around to pouring area...")
+controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["PRE_POUR_AWAY"], steps=60)
+controller.print_pose(robot2, "R2 at Pre-Pour Position")
+
+# Step 11: Move to the final pouring position
+print("\n[R2] Moving to final pour position...")
+pour_height = 0.5
+pour_pose = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"] @ SE3(-0.6, 0, scene.glass_height + pour_height) @ SE3.Rx(pi/2) @ SE3.Ry(pi/2)
+final_q, success = controller.find_ikine(robot2, pour_pose, initial_q_guess=robot2.q)
+
+if success:
+    controller.animate_trajectory(robot2, robot2.q, final_q, steps=60)
+    controller.print_pose(robot2, "R2 Ready to Pour")
+    
+    # Step 12: Pour the drink by rotating the wrist (joint 5)
+    print("\n[R2] Pouring...")
+    pour_q = robot2.q.copy()
+    pour_q[4] += np.deg2rad(115) # Rotate joint 5 by 90 degrees to pour
+    controller.animate_trajectory(robot2, robot2.q, pour_q, steps=60)
+    controller.print_pose(robot2, "R2 Finished Pouring")
+
+    # Step 13: Rotate the drink back up by rotating the wrist (joint 5)
+    print("\n[R2] Rotating...")
+    unpour_q = robot2.q.copy()
+    unpour_q[4] -= np.deg2rad(115) # Rotate joint 5 by 90 degrees to unpour
+    controller.animate_trajectory(robot2, robot2.q, unpour_q, steps=60)
+    controller.print_pose(robot2, "R2 Finished rotating drink")
+
+    # Step 14: Return the drink
+    print("\n[R2] Approaching drink return...")
+    target_r2_pose = scene.drink_poses[drink_index] @ SE3.Ty(scene.drink_radius) @ SE3.Rx(pi/2)
+    hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_GUESSES["PICKUP_DRINK"], "y", False, 0.5)
+    controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
+    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+
+    controller.drop_object(robot2)
+
+    # Return home
+    home_q = R2_GUESSES["HOME"]
+    controller.animate_trajectory(robot2, robot2.q, home_q, steps=60)
+
+else:
+    print("Unable to find a valid path to the pouring position.")
 
 env.hold()

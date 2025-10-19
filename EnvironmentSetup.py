@@ -1,6 +1,7 @@
 import swift
 from spatialmath import SE3
 from spatialgeometry import Cylinder, Cuboid
+from math import pi
 
 class Scene:
     """
