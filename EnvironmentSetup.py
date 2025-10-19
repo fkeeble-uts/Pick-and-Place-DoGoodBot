@@ -173,7 +173,7 @@ class Scene:
                                        self.button_center_z + self.BUTTON_BASE_HEIGHT/2 + self.BUTTON_HEIGHT/2))
         env.add(red_button)
 
-        # --- Glasses on Glass Table ---
+        # --- Glasses ---
         self.glass_objects = []
         self.glass_poses = []
         glass_radius = 0.025
