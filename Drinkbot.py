@@ -12,7 +12,7 @@ from math import pi
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # Robot class
-class IngredientBot(DHRobot3D):
+class DrinkBot(DHRobot3D):
     def __init__(self):
         links = self._create_DH()
         link3D_names = dict(
