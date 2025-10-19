@@ -87,8 +87,9 @@ class Glassbot(DHRobot3D):
         self._env = env
         # env.add(self._left_finger)
         # env.add(self._right_finger)
-        self._update_fingers()
+        # self._update_fingers()
 
+    '''
     # --------------------- Finger transforms --------------------- #
     def _finger_transform(self, tcp, side, gap):
         y = gap / 2.0 if side == "left" else -gap / 2.0
@@ -115,6 +116,7 @@ class Glassbot(DHRobot3D):
             self._update_fingers()
             if self._env:
                 self._env.step(0.02)
+    '''
 
     # -----------------------------------------------------------------------------------#
     def _create_DH(self):
