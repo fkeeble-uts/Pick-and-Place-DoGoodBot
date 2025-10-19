@@ -466,17 +466,17 @@ def create_sliders(robot, sim_env):
 
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
-    ROBOT_TO_LOAD = "IngredientBot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
+    ROBOT_TO_LOAD = "IngredientBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
     RUN_IKINE = False  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
-    if ROBOT_TO_LOAD == "IngredientBot":
+    if ROBOT_TO_LOAD == "DrinkBot":
         robot_arm = robot2
-    elif ROBOT_TO_LOAD == "Drinkbot":
+    elif ROBOT_TO_LOAD == "IngredientBot":
         robot_arm = robot3
-    elif ROBOT_TO_LOAD == "Glassbot":
+    elif ROBOT_TO_LOAD == "GlassBot":
         robot_arm = robot1
-    elif ROBOT_TO_LOAD == "Serverbot":
+    elif ROBOT_TO_LOAD == "ServerBot":
         robot_arm = robot4
     else:
         raise ValueError(f"Robot '{ROBOT_TO_LOAD}' is not a valid choice.")
