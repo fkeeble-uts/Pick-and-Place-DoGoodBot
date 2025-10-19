@@ -18,8 +18,6 @@ class Scene:
         self.TRAJ_STEPS = 60
 
         # --- Shared Object Dimensions ---
-        self.GLASS_RADIUS = 0.03
-        self.GLASS_HEIGHT = 0.06
         self.BUTTON_RADIUS = 0.05
         self.BUTTON_HEIGHT = 0.03
         self.BUTTON_BASE_LENGTH = 0.12
@@ -177,7 +175,7 @@ class Scene:
         self.glass_objects = []
         self.glass_poses = []
         glass_radius = 0.025
-        glass_height = 0.1
+        self.glass_height = 0.1
         glass_color = [1.0, 0.4, 0.0, 0.7]
 
         width_fractions = [0.1, 0.5, 0.9]
@@ -187,10 +185,10 @@ class Scene:
             for xf in length_fractions:
                 x_pos = self.glass_table_center_x - self.glass_table_length/2 + xf * self.glass_table_length
                 y_pos = self.glass_table_center_y - self.glass_table_width/2 + yf * self.glass_table_width
-                z_pos = self.glass_table_height + glass_height / 2
+                z_pos = self.glass_table_height + self.glass_height / 2
 
                 glass = Cylinder(radius=glass_radius,
-                                 length=glass_height,
+                                 length=self.glass_height,
                                  color=glass_color,
                                  pose=SE3(x_pos, y_pos, z_pos))
                 self.env.add(glass)
