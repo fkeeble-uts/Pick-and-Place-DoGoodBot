@@ -30,8 +30,8 @@ class Drinkbot(DHRobot3D):
             link3='TM5_Link3new', color3=(0.4, 0.45, 0.5, 1),
             link4='TM5_Link4new', color4=(0.8, 0.8, 0.8, 1),
             link5='TM5_Link5new', color5=(0.8, 0.8, 0.8, 1),
-            link6='TM5_EndEffector', color6=(0.8, 0.8, 0.8, 1),
-            link7='TM5_EndEffector', color7=(0.8, 0.8, 0.8, 1)
+            link6='TM5_EndEff', color6=(0.8, 0.8, 0.8, 1),
+            link7='TM5_EndEff', color7=(0.8, 0.8, 0.8, 1)
         )
         qtest = [0, 0, 0, 0, 0, 0]
         qtest_transforms = [
@@ -41,7 +41,7 @@ class Drinkbot(DHRobot3D):
                             SE3.Rz(pi/2).A @ spb.transl(-0.0666, -0.0445, 0.4759),
                             SE3.Rz(pi/2).A @ spb.transl(-0.17, -0.0452, 0.727),
                             SE3.Rz(pi/2).A @ spb.transl(-0.1831, 0.0005, 0.872),
-                            SE3.Rz(pi/2).A @ spb.transl(-0.2915, 0.0005, 0.9058),
+                            SE3.Rz(pi/2).A @ spb.transl(-0.24, -0.0225, 0.893),
                             spb.transl(5, 0, 0)] 
         current_path = os.path.abspath(os.path.dirname(__file__))
         link3d_path = os.path.join(current_path, "assets")
