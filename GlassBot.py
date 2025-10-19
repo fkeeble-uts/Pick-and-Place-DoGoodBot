@@ -22,7 +22,7 @@ class GlassBot(DHRobot3D):
 
         # Mesh names
         link3D_names = dict(
-            link0="link0",
+            link0='link0',
             link1="link1",
             link2="link2",
             link3="link3",
@@ -46,7 +46,7 @@ class GlassBot(DHRobot3D):
         ]
 
         current_path = os.path.abspath(os.path.dirname(__file__))
-        link3d_path = os.path.join(current_path, "assets")
+        link3d_path = os.path.join(current_path, "3D Robot Assets")
 
         super().__init__(
             links,
