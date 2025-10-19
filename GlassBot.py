@@ -11,7 +11,7 @@ import numpy as np
 from spatialgeometry import Sphere, Cuboid
 
 # -----------------------------------------------------------------------------------#
-class Glassbot(DHRobot3D):
+class GlassBot(DHRobot3D):
     def __init__(self):
         """
         ABB IRB120 Robot using DH model + STL meshes with grippers.
@@ -198,6 +198,6 @@ class Glassbot(DHRobot3D):
 
 # -----------------------------------------------------------------------------------#
 if __name__ == "__main__":
-    r = Glassbot()
+    r = GlassBot()
     q_goal = [0.5, -0.3, 0.2, 0.5, 0.5, 0.5]
     r.test_with_fk(q_goal)

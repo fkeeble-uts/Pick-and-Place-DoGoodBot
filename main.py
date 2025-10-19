@@ -7,9 +7,9 @@ from spatialgeometry import Cylinder, Cuboid, Box
 from robot_helpers import RobotController
 from math import pi
 
-from Drinkbot import Drinkbot
+from DrinkBot import DrinkBot
 from IngredientBot import IngredientBot
-from Glassbot import Glassbot
+from GlassBot import GlassBot
 from Serverbot import Serverbot
 from EnvironmentSetup import Scene
 
@@ -26,18 +26,18 @@ controller = RobotController(env, scene)
 # ----------------------------------------------------
 
 # Robot 1: Glass & Ice Handler
-robot1 = Glassbot()
+robot1 = GlassBot()
 robot1.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
 
 # Robot 2: Alcohol Pourer
-robot2 = IngredientBot()
+robot2 = DrinkBot()
 robot2.q = robot2.home_q
 robot2.base = scene.ROBOT_BASE_POSES["R2_ALCOHOL"]
 robot2.add_to_env(env)
 
-# Robot 3: Mixer Adder
-robot3 = Drinkbot()
+# Robot 3: Ingredient Adder
+robot3 = IngredientBot()
 robot3.q = robot3.home_q
 robot3.base = scene.ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
