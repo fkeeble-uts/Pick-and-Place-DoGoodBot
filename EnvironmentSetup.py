@@ -235,6 +235,7 @@ class Scene:
         # --- Ingredients Table Objects ---
         self.ingredient_objects = []
         self.cube_objects = []
+        self.cube_poses = []
         board_length, board_width, board_height = 0.3, 0.185, 0.02
         cube_size = 0.025
         cube_spacing_x = 0.07
@@ -262,7 +263,9 @@ class Scene:
                     cube_x = x_start + col * (cube_size + cube_spacing_x)
                     cube_y = y_start + row * (cube_size + cube_spacing_y)
                     cube_z = z_pos + board_height/2 + cube_size/2
-                    cube = Cuboid(scale=[cube_size, cube_size, cube_size], color=cube_colors[color_key], pose=SE3(cube_x, cube_y, cube_z))
+                    cube_pose = SE3(cube_x, cube_y, cube_z)
+                    self.cube_poses.append(cube_pose)
+                    cube = Cuboid(scale=[cube_size, cube_size, cube_size], color=cube_colors[color_key], pose=SE3(cube_pose))
                     self.env.add(cube)
                     self.ingredient_objects.append(cube)
                     self.cube_objects.append(cube)
