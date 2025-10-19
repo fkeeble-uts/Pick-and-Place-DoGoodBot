@@ -85,8 +85,8 @@ class Glassbot(DHRobot3D):
         """
         super().add_to_env(env)
         self._env = env
-        env.add(self._left_finger)
-        env.add(self._right_finger)
+        # env.add(self._left_finger)
+        # env.add(self._right_finger)
         self._update_fingers()
 
     # --------------------- Finger transforms --------------------- #
