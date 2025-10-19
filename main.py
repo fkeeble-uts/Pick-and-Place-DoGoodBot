@@ -81,7 +81,7 @@ R3_GUESSES = {
     "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([0, 0, 0, 0, 0, 0]))    # glass drop off position where i will add ingredients
 }
 
-'''
+
 # ============================================================================
 # ROBOT 1 SEQUENCE - PICK AND PLACE GLASS
 # ============================================================================
@@ -144,7 +144,7 @@ if success:
     controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
     controller.print_pose(robot1, "R1 Lifted Glass")
     controller.animate_trajectory(robot1, robot1.q, np.zeros(6), steps=60)
-'''
+
 
 # ============================================================================
 # ROBOT 2 SEQUENCE - ADD ALCOHOL TO GLASS
@@ -216,5 +216,100 @@ if success:
 
 else:
     print("Unable to find a valid path to the pouring position.")
+
+
+
+# ============================================================================
+# ROBOT 3 SEQUENCE - ADD INGREDIENTS TO GLASS
+# ============================================================================
+
+# yellow cubes are 0-8 (Index 0 is the closest cube)
+# green cubes are 9-17
+# blue cubes are 18-26
+
+# Configuration
+CUBE_INDEX = 8 # Confirmed reachable cube
+HOVER_HEIGHT_R3 = 0.08 # Increased hover height for better clearance
+DROP_HEIGHT_R3 = 0.2
+PLACEMENT_DEPTH = 0.05 # Decreased placement depth (placing it deeper into the glass)
+# CUBE_GRIP_OFFSET removed to prevent clipping the table!
+
+X_GLASS = -0.9
+Y_GLASS = 0
+Z_GLASS = 1.1
+
+# Target Objects
+cube_target = scene.cube_objects[CUBE_INDEX]
+GLASS_PLACEMENT_POSE = SE3(X_GLASS, Y_GLASS, Z_GLASS)
+VERTICAL_ORIENTATION = SE3.Rx(pi)
+
+# FIND POSE
+
+cube_target_pose = scene.cube_poses[CUBE_INDEX] 
+# PICK_POSE now targets the exact top surface of the cube to prevent clipping
+PICK_POSE = cube_target_pose @ VERTICAL_ORIENTATION 
+HOVER_POSE = PICK_POSE @ SE3.Tz(-HOVER_HEIGHT_R3) # Hover above the pickup pose, using negative Z in the tool frame
+
+glass_target_pose = GLASS_PLACEMENT_POSE
+PLACE_POSE = glass_target_pose @ SE3.Tz(PLACEMENT_DEPTH) @ VERTICAL_ORIENTATION
+DROP_POSE = PLACE_POSE @ SE3.Tz(DROP_HEIGHT_R3)
+
+# Execute Sequence 
+print("\n" + "="*70)
+print(f">>> ROBOT R3: PICKING UP CUBE {CUBE_INDEX} <<<")
+print("="*70 + "\n")
+
+# Use the known good joint state for the approach hover
+hover_q_r3 = R3_GUESSES["PICKUP_YELLOW"] 
+
+# Step 1: Move to initial hover position (Joint space move - R2 equivalent Step 7 approach)
+print("\n[R3] Approaching cube hover position...")
+controller.animate_trajectory(robot3, robot3.q, hover_q_r3, steps=60)
+controller.print_pose(robot3, f"R3 at Hover before Cube {CUBE_INDEX} Pickup")
+
+# Step 2: Move down to the Pick Pose (Cartesian move - R2 equivalent Step 7 down)
+print("\n[R3] Moving down to Pick Pose (Cartesian move)...")
+controller.move_cartesian(robot3, robot3.q, PICK_POSE, 50)
+controller.print_pose(robot3, "R3 at Pick Position")
+
+# Step 3: Pick up the object (R2 equivalent Step 8)
+controller.pickup_object(robot3, cube_target)
+print(f"Cube {CUBE_INDEX} picked up.")
+
+# Step 4: Retract back to Hover Pose (Cartesian move - R2 equivalent Step 9 retract)
+# This uses HOVER_POSE which is guaranteed to be safe and above the table.
+print("\n[R3] Retracting to Hover Pose...")
+controller.move_cartesian(robot3, robot3.q, HOVER_POSE, 50)
+controller.print_pose(robot3, "R3 Retracted")
+
+# Step 5: Swing around to the drop hover position (Hardcoded Joint Space Move - R2 equivalent Step 10)
+print("\n[R3] Swinging around to drop area...")
+drop_q_r3 = R3_GUESSES["DROP_HOVER"]
+controller.animate_trajectory(robot3, robot3.q, drop_q_r3, steps=80) # Use more steps for a smoother 'turn around'
+controller.print_pose(robot3, "R3 at Drop Hover Position")
+
+# Step 6: Move down to the Place Pose inside glass (Cartesian move - R2 equivalent Step 11 final pour)
+print("\n[R3] Moving down to Place Pose inside glass...")
+controller.move_cartesian(robot3, robot3.q, PLACE_POSE, 50)
+controller.print_pose(robot3, "R3 at Place Position")
+
+# Step 7: Release the object (R2 equivalent Step 12/13 pour/unpour action)
+controller.release_object(robot3, cube_target) 
+print(f"Cube {CUBE_INDEX} released into the static drink location.")
+
+# Step 8: Retract back to Drop Hover Pose (Cartesian move - R2 equivalent Step 14 retract)
+print("\n[R3] Retracting back to Drop Hover...")
+controller.move_cartesian(robot3, robot3.q, DROP_POSE, 50)
+
+# Step 9: Move to a safe 'home' or park position (R2 equivalent final home)
+print("\n[R3] Moving to Park Position...")
+park_q = R3_GUESSES["HOME"] 
+controller.animate_trajectory(robot3, robot3.q, park_q, steps=60)
+controller.print_pose(robot3, "R3 at Park Position")
+
+env.hold()
+
+
+
 
 env.hold()

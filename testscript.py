@@ -103,10 +103,11 @@ R3_GUESSES = {
 # blue cubes are 18-26
 
 # Configuration
-CUBE_INDEX = 0 # Explicitly set to the closest cube (Yellow, Index 0)
-HOVER_HEIGHT_R3 = 0.05
+CUBE_INDEX = 8 # Confirmed reachable cube
+HOVER_HEIGHT_R3 = 0.08 # Increased hover height for better clearance
 DROP_HEIGHT_R3 = 0.2
-PLACEMENT_DEPTH = 0.1
+PLACEMENT_DEPTH = 0.05 # Decreased placement depth (placing it deeper into the glass)
+# CUBE_GRIP_OFFSET removed to prevent clipping the table!
 
 X_GLASS = -0.9
 Y_GLASS = 0
@@ -120,8 +121,9 @@ VERTICAL_ORIENTATION = SE3.Rx(pi)
 # FIND POSE
 
 cube_target_pose = scene.cube_poses[CUBE_INDEX] 
-PICK_POSE = cube_target_pose @ VERTICAL_ORIENTATION
-HOVER_POSE = PICK_POSE @ SE3.Tz(HOVER_HEIGHT_R3)
+# PICK_POSE now targets the exact top surface of the cube to prevent clipping
+PICK_POSE = cube_target_pose @ VERTICAL_ORIENTATION 
+HOVER_POSE = PICK_POSE @ SE3.Tz(-HOVER_HEIGHT_R3) # Hover above the pickup pose, using negative Z in the tool frame
 
 glass_target_pose = GLASS_PLACEMENT_POSE
 PLACE_POSE = glass_target_pose @ SE3.Tz(PLACEMENT_DEPTH) @ VERTICAL_ORIENTATION
@@ -132,65 +134,52 @@ print("\n" + "="*70)
 print(f">>> ROBOT R3: PICKING UP CUBE {CUBE_INDEX} <<<")
 print("="*70 + "\n")
 
-# --- HARDCODE FIX FOR URGENT PROGRESS CHECK ---
-# We are skipping the IK search and using a known, defined joint state 
-# to ensure the move works immediately for the initial hover.
-hover_q_r3 = R3_GUESSES["PICKUP_YELLOW"] # Use the known good guess for the approach
-success = True 
+# Use the known good joint state for the approach hover
+hover_q_r3 = R3_GUESSES["PICKUP_YELLOW"] 
 
-if success:
-    # Step 1: Move to initial hover position (Joint space move)
-    controller.animate_trajectory(robot3, robot3.q, hover_q_r3, steps=60)
-    controller.print_pose(robot3, f"R3 at Hover before Cube {CUBE_INDEX} Pickup (Hardcoded)")
+# Step 1: Move to initial hover position (Joint space move - R2 equivalent Step 7 approach)
+print("\n[R3] Approaching cube hover position...")
+controller.animate_trajectory(robot3, robot3.q, hover_q_r3, steps=60)
+controller.print_pose(robot3, f"R3 at Hover before Cube {CUBE_INDEX} Pickup")
 
-    # Step 2: Move down to the Pick Pose (Reverting to Cartesian move for vertical drop)
-    print("\n[R3] Moving down to Pick Pose (using Cartesian move)...")
-    
-    # Use the robust controller.move_cartesian for the short, vertical, straight-line drop
-    # This replaces the failing manual IK/joint move combination.
-    controller.move_cartesian(robot3, robot3.q, PICK_POSE, 50)
-    controller.print_pose(robot3, "R3 at Pick Position")
+# Step 2: Move down to the Pick Pose (Cartesian move - R2 equivalent Step 7 down)
+print("\n[R3] Moving down to Pick Pose (Cartesian move)...")
+controller.move_cartesian(robot3, robot3.q, PICK_POSE, 50)
+controller.print_pose(robot3, "R3 at Pick Position")
 
-    # Step 3: Pick up the object
-    controller.pickup_object(robot3, cube_target)
-    print(f"Cube {CUBE_INDEX} picked up.")
+# Step 3: Pick up the object (R2 equivalent Step 8)
+controller.pickup_object(robot3, cube_target)
+print(f"Cube {CUBE_INDEX} picked up.")
 
-    # Step 4: Retract back to Hover Pose (Cartesian motion is safer here since it's only moving up)
-    print("\n[R3] Retracting to Hover Pose...")
-    controller.move_cartesian(robot3, robot3.q, HOVER_POSE, 50)
+# Step 4: Retract back to Hover Pose (Cartesian move - R2 equivalent Step 9 retract)
+# This uses HOVER_POSE which is guaranteed to be safe and above the table.
+print("\n[R3] Retracting to Hover Pose...")
+controller.move_cartesian(robot3, robot3.q, HOVER_POSE, 50)
+controller.print_pose(robot3, "R3 Retracted")
 
-    # Step 5: Move to the Drop Pose above the glass 
+# Step 5: Swing around to the drop hover position (Hardcoded Joint Space Move - R2 equivalent Step 10)
+print("\n[R3] Swinging around to drop area...")
+drop_q_r3 = R3_GUESSES["DROP_HOVER"]
+controller.animate_trajectory(robot3, robot3.q, drop_q_r3, steps=80) # Use more steps for a smoother 'turn around'
+controller.print_pose(robot3, "R3 at Drop Hover Position")
 
-    # CRITICAL FIX (Temporary Hardcode): Bypassing IK entirely for the transition move.
-    drop_q_r3 = R3_GUESSES["DROP_HOVER"]
-    success_drop = True
+# Step 6: Move down to the Place Pose inside glass (Cartesian move - R2 equivalent Step 11 final pour)
+print("\n[R3] Moving down to Place Pose inside glass...")
+controller.move_cartesian(robot3, robot3.q, PLACE_POSE, 50)
+controller.print_pose(robot3, "R3 at Place Position")
 
-    if success_drop:
-        controller.animate_trajectory(robot3, robot3.q, drop_q_r3, steps=80) # Use more steps for a smoother 'turn around'
-        controller.print_pose(robot3, "R3 at Drop Pose before Placement (Hardcoded)")
+# Step 7: Release the object (R2 equivalent Step 12/13 pour/unpour action)
+controller.release_object(robot3, cube_target) 
+print(f"Cube {CUBE_INDEX} released into the static drink location.")
 
-        # Step 6: Move down to the Place Pose (Cartesian motion)
-        print("\n[R3] Moving down to Place Pose inside glass...")
-        controller.move_cartesian(robot3, robot3.q, PLACE_POSE, 50)
+# Step 8: Retract back to Drop Hover Pose (Cartesian move - R2 equivalent Step 14 retract)
+print("\n[R3] Retracting back to Drop Hover...")
+controller.move_cartesian(robot3, robot3.q, DROP_POSE, 50)
 
-        # Step 7: Release the object
-        controller.release_object(robot3, cube_target) 
-        print(f"Cube {CUBE_INDEX} released into the static drink location.")
-
-        # Step 8: Retract back to Drop Pose
-        print("\n[R3] Retracting to Drop Pose...")
-        controller.move_cartesian(robot3, robot3.q, DROP_POSE, 50)
-
-        # Step 9: Move to a safe 'home' or park position
-        print("\n[R3] Moving to Park Position...")
-        park_q = R3_GUESSES["HOME"] # Using the user-defined park guess
-        controller.animate_trajectory(robot3, robot3.q, park_q, steps=60)
-        controller.print_pose(robot3, "R3 at Park Position")
-        
-    else:
-        print("FATAL ERROR: Movement failed after pickup due to hardcoded IK bypass not working (unlikely).")
-
-else:
-    print("FATAL ERROR: Unable to find IK solution for cube hover pose.")
+# Step 9: Move to a safe 'home' or park position (R2 equivalent final home)
+print("\n[R3] Moving to Park Position...")
+park_q = R3_GUESSES["HOME"] 
+controller.animate_trajectory(robot3, robot3.q, park_q, steps=60)
+controller.print_pose(robot3, "R3 at Park Position")
 
 env.hold()
