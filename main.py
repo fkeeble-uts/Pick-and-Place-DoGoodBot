@@ -75,7 +75,7 @@ R2_GUESSES = {
 # R3 (Drinkbot) 
 R3_GUESSES = {
     "HOME": robot3.q.copy(),
-    "PICKUP_Yellow": np.deg2rad(np.array([0, 47, 73, -32, 91, 0])),  # Position to pick up Yellow ingredient
+    "PICKUP_YELLOW": np.deg2rad(np.array([0, 47, 73, -32, 91, 0])),  # Position to pick up Yellow ingredient
     "PICKUP_GREEN": np.deg2rad(np.array([-20, 47, 65, -30, 89, 0])),   # Position to pick up Green ingredient
     "PICKUP_BLUE": np.deg2rad(np.array([-34, 53, 65, -30, 89, 0])),  # Position to pick up Blue ingredient
     "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([0, 0, 0, 0, 0, 0]))    # glass drop off position where i will add ingredients
@@ -284,7 +284,7 @@ controller.print_pose(robot3, "R3 Retracted")
 
 # Step 5: Swing around to the drop hover position (Hardcoded Joint Space Move - R2 equivalent Step 10)
 print("\n[R3] Swinging around to drop area...")
-drop_q_r3 = R3_GUESSES["DROP_HOVER"]
+drop_q_r3 = R3_GUESSES["DEPOSIT_INGREDIENTS"]
 controller.animate_trajectory(robot3, robot3.q, drop_q_r3, steps=80) # Use more steps for a smoother 'turn around'
 controller.print_pose(robot3, "R3 at Drop Hover Position")
 
