@@ -111,6 +111,21 @@ class Scene:
         self.num_wraps       = 3
         self.wrap_spacing_factor = 0.25
 
+        # --- Bar Mat Configuration  ---
+        self.BAR_MAT_THICKNESS = 0.02 
+        self.BAR_MAT_LENGTH_X = 0.3                
+        self.BAR_MAT_WIDTH_Y = 0.2                   
+        self.BAR_MAT_COLOR = [0.1, 0.1, 0.1, 0.8]  
+        self.BAR_MAT_Z_POS = self.table1_height + self.floor_height + self.BAR_MAT_THICKNESS / 2
+
+        # Mat Positions on Table 1 
+        self.BAR_MAT_POSITIONS = [
+            # Mat A: Between R1 and R2 
+            {"name": "Mat_A_R1_R2", "x": 1.1, "y": self.table1_center_y}, 
+            # Mat B: Between R2  and R3 (Drinkbot) 
+            {"name": "Mat_B_R2_R3", "x": -1.0, "y": self.table1_center_y},
+        ]
+
         # --- Robot base poses ---
         self.ROBOT_BASE_POSES = {
             "R1_ICE_GLASS": SE3(1.6, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
@@ -173,6 +188,15 @@ class Scene:
                     wrap_z = self.led_height + (h - 0.05 - self.led_height) * self.wrap_spacing_factor * j
                     wrap_ring = Cuboid(scale=[l + self.led_margin*2, w + self.led_margin*2, self.led_height], color=self.led_color, pose=SE3(cx, cy, wrap_z))
                     self.env.add(wrap_ring)
+
+        # --- Bar Mats ---
+        for mat_config in self.BAR_MAT_POSITIONS:
+            mat = Cuboid(
+                scale=[self.BAR_MAT_LENGTH_X, self.BAR_MAT_WIDTH_Y, self.BAR_MAT_THICKNESS],
+                color=self.BAR_MAT_COLOR,
+                pose=SE3(mat_config["x"], mat_config["y"], self.BAR_MAT_Z_POS)
+            )
+            self.env.add(mat)
 
         # --- Emergency stop button ---
         stop_base = Cuboid(scale=[self.BUTTON_BASE_LENGTH, 
@@ -270,5 +294,8 @@ class Scene:
                     self.env.add(cube)
                     self.ingredient_objects.append(cube)
                     self.cube_objects.append(cube)
+
+
+    
 
         print("Scene configuration loaded.")
