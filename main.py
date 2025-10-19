@@ -9,7 +9,7 @@ from math import pi
 
 from DrinkBot import DrinkBot
 from IngredientBot import IngredientBot
-from Glassbot import Glassbot
+from GlassBot import GlassBot
 from Serverbot import Serverbot
 from EnvironmentSetup import Scene
 
@@ -26,7 +26,7 @@ controller = RobotController(env, scene)
 # ----------------------------------------------------
 
 # Robot 1: Glass & Ice Handler
-robot1 = Glassbot()
+robot1 = GlassBot()
 robot1.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
 
