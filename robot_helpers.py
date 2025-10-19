@@ -64,16 +64,9 @@ class RobotController:
         logging.warning(f"Failed to find a valid IK solution after {num_attempts} attempts.")
         return robot.q, False
     
-    def move_cartesian(self, robot, start_q, target_pose, num_steps, ignore_rotation=False):
+    def move_cartesian(self, robot, start_q, target_pose, num_steps, ignore_rotation=False, carry_object=None):
         """
-        Generates and follows a Cartesian path from a starting joint configuration.
-
-        Args:
-            robot: The robot object to move.
-            start_q (array): The starting joint angles of the robot.
-            target_pose (SE3): The final target pose.
-            num_steps (int): The number of steps for the trajectory.
-            ignore_rotation (bool, optional): Whether to ignore rotation in the IK solve.
+        Generates and follows a Cartesian path, optionally carrying an object.
         """
         print(f"[{robot.name}] Following Cartesian path...")
 
@@ -89,6 +82,9 @@ class RobotController:
             if solved:
                 robot.q = q_step
                 current_q = q_step
+                if carry_object is not None:
+                    T_tcp = robot.fkine(q_step)
+                    carry_object.T = T_tcp.A
                 self.env.step(self.scene.SIM_STEP_TIME)
             else:
                 logging.warning(f"IK failed at step {i+1}/{num_steps} during Cartesian move. Halting motion.")

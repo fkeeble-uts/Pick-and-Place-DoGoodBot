@@ -48,11 +48,11 @@ robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
 robot4.add_to_env(env)
 
 # ============================================================================
-# SAVED JOINT POSES FROM TEACH MODE
+# JOINT INITIAL GUESSES
 # ============================================================================
 
 # R1 (Glassbot)
-R1_POSES = {
+R1_GUESSES = {
     "HOME": np.deg2rad(np.array([0., 0., 0., 0., 0., 0.])),
     "GLASS_APPROACH": np.deg2rad(np.array([0., 40.68, 16.82, 9.09, 0., 0.])),
     "GLASS_PICKUP": np.deg2rad(np.array([0., 62.27, 0.45, 10.91, 0., 0.])),
@@ -62,14 +62,14 @@ R1_POSES = {
 }
 
 # R2 (Drinkbot)
-R2_POSES = {
+R2_GUESSES = {
     "HOME": robot2.q.copy(),
     "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),  # Position to pick up drink
     "PLACE_GLASS": np.deg2rad(np.array([0, 25.495, 174.686, 0, -208, 0]))    # Position to place drink
 }
 
 # R3 (Drinkbot) 
-R3_POSES = {
+R3_GUESSES = {
     "HOME": robot3.q.copy(),
     "PICKUP_Yellow": np.deg2rad(np.array([0, 47, 73, -32, 91, 0])),  # Position to pick up Yellow ingredient
     "PICKUP_GREEN": np.deg2rad(np.array([-20, 47, 65, -30, 89, 0])),   # Position to pick up Green ingredient
@@ -85,25 +85,32 @@ print("\n" + "="*70)
 print(">>> ROBOT 1: PICKING UP GLASS <<<")
 print("="*70 + "\n")
 
-glass_index = 4  # Use middle glass
+glass_index = 3  # Use middle glass closest to glassbot
 target_glass = scene.glass_objects[glass_index]
 held_by_r1 = False
 held_by_r2 = False
 
-q_now_r1 = R1_POSES["HOME"]
+q_now_r1 = R1_GUESSES["HOME"]
 robot1.q = q_now_r1
 controller.print_pose(robot1, "R1 at HOME")
 time.sleep(0.5)
 
-# Step 1: Approach glass
+# Step 1: Place R1 EE on top of glass
 print("\n[R1] Approaching glass...")
-q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_APPROACH"], steps=50, name="Glass Approach")
-controller.print_pose(robot1, "R1 at GLASS_APPROACH")
-time.sleep(0.5)
+target_r1_pose = scene.glass_poses[3] @ SE3.Tz(scene.glass_height/2) @ SE3.Ry(pi)
+print(target_r1_pose)
+hover_q_r1, success = controller.find_ikine(robot1, target_r1_pose, R1_GUESSES["GLASS_PICKUP"], "z", False, 0.5)
+controller.animate_trajectory(robot1, robot1.q, hover_q_r1, steps=60, carry_object=None)
+controller.print_pose(robot1, "R1 at hover over glass 3")
+if success:
+    controller.move_cartesian(robot1, robot1.q, target_r1_pose, 50)
+else:
+    print("Unable to move robot1 to hover pose")
 
+'''
 # Step 2: Move to glass level
 print("\n[R1] Moving to glass pickup position...")
-q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_PICKUP"], steps=40, name="Glass Pickup", 
+q_now_r1 = controller.move_to_q(robot1, R1_GUESSES["GLASS_PICKUP"], steps=40, name="Glass Pickup", 
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at GLASS_PICKUP")
 time.sleep(0.5)
@@ -115,14 +122,14 @@ time.sleep(0.5)
 
 # Step 4: Lift glass
 print("\n[R1] Lifting glass...")
-q_now_r1 = controller.move_to_q(robot1, R1_POSES["LIFT_CLEAR"], steps=40, name="Lift Clear",
+q_now_r1 = controller.move_to_q(robot1, R1_GUESSES["LIFT_CLEAR"], steps=40, name="Lift Clear",
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at LIFT_CLEAR")
 time.sleep(0.5)
 
 # Step 5: Move to ice machine
 print("\n[R1] Moving to ice machine...")
-q_now_r1 = controller.move_to_q(robot1, R1_POSES["ICE_MACHINE"], steps=60, name="Ice Machine",
+q_now_r1 = controller.move_to_q(robot1, R1_GUESSES["ICE_MACHINE"], steps=60, name="Ice Machine",
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at ICE_MACHINE")
 print("[R1] Simulating ice fill...")
@@ -130,10 +137,11 @@ time.sleep(1.0)
 
 # Step 6: Move to handoff location
 print("\n[R1] Moving to handoff location...")
-q_now_r1 = controller.move_to_q(robot1, R1_POSES["HANDOFF"], steps=60, name="Handoff",
+q_now_r1 = controller.move_to_q(robot1, R1_GUESSES["HANDOFF"], steps=60, name="Handoff",
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at HANDOFF")
 time.sleep(0.5)
+'''
 
 
 # ============================================================================
@@ -144,11 +152,16 @@ print("\n" + "="*70)
 print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
 
+print("Glass poses:")
+for i in range(len(scene.glass_poses)):
+    print(f"Pose of glass {i}:")
+    print(scene.glass_poses[i])
+
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
 target_r2_pose = scene.drink_poses[3] @ SE3.Ty(scene.drink_radius) @ SE3.Rx(pi/2)
 print(target_r2_pose)
-hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_POSES["PICKUP_DRINK"], "y", False, 0.5)
+hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_GUESSES["PICKUP_DRINK"], "y", False, 0.5)
 controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60, carry_object=None)
 controller.print_pose(robot2, "R2 at Hover before Drink 4")
 if success:
