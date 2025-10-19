@@ -94,12 +94,13 @@ time.sleep(0.5)
 
 # Step 1: Move to a hover position above the glass
 print("\n[R1] Moving to hover above glass...")
-# Target the center of the glass, but with a vertical offset for the TCP
-target_hover_pose = scene.glass_poses[glass_index] @ SE3.Tz(0.2) @ SE3.Ry(pi)
-q_hover, success = controller.find_ikine(robot1, target_hover_pose, R1_GUESSES["GLASS_APPROACH"])
+# Target the center of the glass, but mask off z
+r1_target = scene.glass_poses[glass_index] @ SE3.Ry(pi)
+r1_q_hover, success = controller.find_ikine(robot1, r1_target, R1_GUESSES["GLASS_APPROACH"], 
+                                         ignore_var="z", ignore_rotation=False, hover_max=0.5)
 
 if success:
-    controller.move_to_q(robot1, q_hover, name="Glass Hover")
+    controller.move_to_q(robot1, r1_q_hover, name="Glass Hover")
 
     # Step 2: Move down to the grasping position
     print("\n[R1] Moving to grasp position...")
@@ -115,9 +116,22 @@ if success:
     # Step 4: Lift the glass vertically
     print("\n[R1] Lifting glass...")
     lift_pose = robot1.fkine(robot1.q) @ SE3.Tz(-0.2)
-    # The glass will now move correctly because the controller is handling it
     controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
     controller.print_pose(robot1, "R1 Lifted Glass")
+
+    # Step 4: Hover the glass over the workstation
+    print("\n[R1] bringing glass to workstation...")
+    r1_target = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"] @ SE3.Tx(-0.5) @ SE3.Tz(scene.glass_height) @ SE3.Ry(pi)
+    r1_q_hover, success = controller.find_ikine(robot1, r1_target, R1_GUESSES["HANDOFF"], 
+                                             ignore_var="z", ignore_rotation=False, hover_max=0.5)
+    
+    controller.animate_trajectory(robot1, robot1.q, r1_q_hover, steps=60)
+    controller.print_pose(robot1, "R1 at hover before placing glass")
+    if success:
+        controller.move_cartesian(robot1, robot1.q, r1_target, 50)
+    else:
+        print("Unable to move robot1 to hover pose")
+    controller.drop_object(robot1)
 
 '''
 # Step 2: Move to glass level
@@ -163,11 +177,6 @@ time.sleep(0.5)
 print("\n" + "="*70)
 print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
-
-print("Glass poses:")
-for i in range(len(scene.glass_poses)):
-    print(f"Pose of glass {i}:")
-    print(scene.glass_poses[i])
 
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
