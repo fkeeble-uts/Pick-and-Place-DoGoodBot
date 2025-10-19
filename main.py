@@ -232,9 +232,9 @@ CUBE_INDEX = 8 # Confirmed reachable cube
 HOVER_HEIGHT_R3 = 0.08 # Increased hover height for better clearance
 DROP_HEIGHT_R3 = 0.2
 PLACEMENT_DEPTH = 0.05 # Decreased placement depth (placing it deeper into the glass)
-# CUBE_GRIP_OFFSET removed to prevent clipping the table!
 
-X_GLASS = -0.9
+
+X_GLASS = -1.0
 Y_GLASS = 0
 Z_GLASS = 1.1
 
@@ -294,7 +294,7 @@ controller.move_cartesian(robot3, robot3.q, PLACE_POSE, 50)
 controller.print_pose(robot3, "R3 at Place Position")
 
 # Step 7: Release the object (R2 equivalent Step 12/13 pour/unpour action)
-controller.release_object(robot3, cube_target) 
+controller.release_object(robot3) 
 print(f"Cube {CUBE_INDEX} released into the static drink location.")
 
 # Step 8: Retract back to Drop Hover Pose (Cartesian move - R2 equivalent Step 14 retract)
