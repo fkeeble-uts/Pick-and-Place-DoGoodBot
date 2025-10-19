@@ -83,7 +83,7 @@ class Scene:
         self.pedestal_width = 0.2
         self.pedestal_height = 1.0
         self.pedestal_x_offset = 0.5
-        self.pedestal_y_offset = 0.5
+        self.pedestal_y_offset = 0.3
 
         # Control Desk
         self.control_desk_length = 0.6
