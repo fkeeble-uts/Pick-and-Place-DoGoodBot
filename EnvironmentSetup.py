@@ -196,6 +196,7 @@ class Scene:
                 self.glass_poses.append(SE3(x_pos, y_pos, z_pos))
 
         # --- Drinks on drink shelf ---
+        self.drink_objects = []
         self.drink_poses = []
         self.drink_radius = 0.05
         self.drink_height = 0.2
@@ -211,6 +212,7 @@ class Scene:
                              color=drink_color,
                              pose=pose)
             self.env.add(drink)
+            self.drink_objects.append(drink)
             self.drink_poses.append(pose)
 
         # --- Ingredients Table Objects ---
