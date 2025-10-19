@@ -295,7 +295,4 @@ class Scene:
                     self.ingredient_objects.append(cube)
                     self.cube_objects.append(cube)
 
-
-    
-
         print("Scene configuration loaded.")
