@@ -175,6 +175,7 @@ class Scene:
 
         # --- Glasses on Glass Table ---
         self.glass_objects = []
+        self.glass_poses = []
         glass_radius = 0.025
         glass_height = 0.1
         glass_color = [1.0, 0.4, 0.0, 0.7]
@@ -194,6 +195,7 @@ class Scene:
                                  pose=SE3(x_pos, y_pos, z_pos))
                 self.env.add(glass)
                 self.glass_objects.append(glass)
+                self.glass_poses.append(SE3(x_pos, y_pos, z_pos))
 
         # --- Drinks on drink shelf ---
         self.drink_poses = []
