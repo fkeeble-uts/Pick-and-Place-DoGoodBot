@@ -39,8 +39,8 @@ class IngredientBot(DHRobot3D):
         super().__init__(links, link3D_names, name='CRB15000', link3d_dir=link3d_path, qtest=qtest, qtest_transforms=qtest_transforms)
         
         qlim_deg = np.array([
-            [-360, -180, -85, -180, -180, -360],
-            [360,  180,  225,  180,  180,  360]
+            [-360, -27, -85, -144, -180, -360],
+            [360,  208,  240,  127,  180,  360]
         ])
         self.qlim = np.deg2rad(qlim_deg)
 
