@@ -374,7 +374,7 @@ def find_ikine(robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rot
     """
     Generalized IK function with a robust hover-zone check for x, y, or z axes.
     """
-    num_attempts = 100
+    num_attempts = 300
     min_limits = robot.qlim[0, :]
     max_limits = robot.qlim[1, :]
     mask = [1, 1, 1, 1, 1, 1]
@@ -466,8 +466,8 @@ def create_sliders(robot, sim_env):
 
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
-    ROBOT_TO_LOAD = "Drinkbot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
-    RUN_IKINE = False  # False for sliders, True for IK test
+    ROBOT_TO_LOAD = "IngredientBot"  # Options: "IngredientBot", "Drinkbot", "Glassbot", "Serverbot"
+    RUN_IKINE = True  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "IngredientBot":
@@ -486,12 +486,12 @@ if __name__ == "__main__":
         print(f"Running IKINE for {ROBOT_TO_LOAD}...")
 
         hover_max = 0.5
-        target_pose = SE3(-0.9, -0.575, 1.01) @ SE3.Ry(pi)
+        target_pose = drink_poses[3] @ SE3.Rx(pi/2)
         print(f"Target Pose:\n{np.round(target_pose.A, 4)}\n")
 
         initial_q = robot_arm.q.copy()
         q_guess = [-74.207, 141.295, -31.751, 9.875, 103.964, -24.255]
-        target_q, success = find_ikine(robot_arm, target_pose, ignore_var="z", ignore_rotation=False, hover_max=hover_max)
+        target_q, success = find_ikine(robot_arm, target_pose, ignore_var="y", ignore_rotation=False, hover_max=hover_max)
 
         if success:
             print("Animating robot to hover pose...")
