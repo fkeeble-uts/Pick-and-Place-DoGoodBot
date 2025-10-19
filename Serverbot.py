@@ -15,44 +15,45 @@ class Serverbot(DHRobot3D):
         # ----------------------------- DH MODEL -----------------------------
         links = self._create_DH()
 
-        # Mesh mapping for each link (must exist in Serverbot_STLs folder)
+        # Mesh mapping for UR3 only (6 links + 1 tool frame)
+        # Removed 'base rail ur3' entry completely
         link3D_names = dict(
-            link0="base_rail_ur3", color0=(0.2,0.2,0.2,1),
-            link1="slider_rail_ur3", color1=(0.1,0.1,0.1,1),
-            link2="shoulder_ur3",
-            link3="upperarm_ur3",
-            link4="forearm_ur3",
-            link5="wrist1_ur3",
-            link6="wrist2_ur3",
-            link7="wrist3_ur3",
+            link0="slider_rail_ur3",  # static base mount
+            link1="shoulder_ur3",
+            link2="upperarm_ur3",
+            link3="forearm_ur3",
+            link4="wrist1_ur3",
+            link5="wrist2_ur3",
+            link6="wrist3_ur3",  # wrist3 mesh also used for TCP
         )
 
         current_path = os.path.abspath(os.path.dirname(__file__))
-        link3d_path = os.path.join(current_path, "assets")  # Correct folder
+        link3d_path = os.path.join(current_path, "assets")
 
-        # Reference configuration and STL alignment transforms
-        qtest = [0, 0, -pi / 2, 0, 0, 0, 0]
+        # Reference configuration (6 DOF)
+        qtest = [0, -pi / 2, 0, 0, 0, 0]
+
+        # 7 transforms (rail mount + 6 robot segments)
         qtest_transforms = [
-            spb.transl(0, 0, 0),
-            spb.trotx(-pi / 2),
-            spb.transl(0, 0.146, 0) @ spb.rpy2tr(0, pi, pi, order="xyz"),
-            spb.transl(0, 0.146, -0.13) @ spb.rpy2tr(0, 0, -pi / 2, order="xyz"),
-            spb.transl(0, 0.39, -0.0378) @ spb.rpy2tr(0, 0, -pi / 2, order="xyz"),
-            spb.transl(0, 0.603, -0.0378) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),
-            spb.transl(0, 0.603, -0.1225) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),
-            spb.transl(0.08535, 0.603, -0.1225) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),
+            spb.transl(0, 0, 0) @ spb.rpy2tr(0, 0, -pi/2, order="xyz"),  # linear_rail_mount (static)
+            spb.transl(0, 0.146, 0) @ spb.rpy2tr(0, pi, pi, order="xyz"),  # shoulder
+            spb.transl(0, 0.146, -0.13) @ spb.rpy2tr(0, 0, -pi / 2, order="xyz"),  # upperarm
+            spb.transl(0, 0.39, -0.0378) @ spb.rpy2tr(0, 0, -pi / 2, order="xyz"),  # forearm
+            spb.transl(0, 0.603, -0.0378) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),  # wrist1
+            spb.transl(0, 0.603, -0.1225) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),  # wrist2
+            spb.transl(0.08535, 0.603, -0.1225) @ spb.rpy2tr(0, pi / 2, -pi / 2, order="xyz"),  # wrist3/TCP
         ]
 
         super().__init__(
             links,
             link3D_names,
             name="Serverbot",
-            link3d_dir=link3d_path,  # Fixed path here
+            link3d_dir=link3d_path,
             qtest=qtest,
             qtest_transforms=qtest_transforms,
         )
 
-        # Rotate base so robot stands upright
+        # Rotate base so robot stands upright on the table
         self.base = self.base * SE3.Rx(pi / 2) * SE3.Ry(pi / 2)
         self.q = qtest
 
@@ -66,26 +67,21 @@ class Serverbot(DHRobot3D):
 
     # ----------------------------------------------------------------------
     def _create_DH(self):
-        """Create robot's DH structure."""
-        links = [rtb.PrismaticDH(theta=pi, a=0, alpha=pi / 2, qlim=[-0.8, 0])]  # linear rail
-
+        """Standard 6DOF UR3 DH model."""
         a = [0, -0.24365, -0.21325, 0, 0, 0]
         d = [0.146, 0, 0, 0.121, 0.083, 0.0819]
         alpha = [pi / 2, 0, 0, pi / 2, -pi / 2, 0]
         offset = [0, 0, 0, 0, 0, 0]
         qlim = [[-2 * pi, 2 * pi] for _ in range(6)]
 
-        for i in range(6):
-            link = rtb.RevoluteDH(
-                d=d[i], a=a[i], alpha=alpha[i], offset=offset[i], qlim=qlim[i]
-            )
-            links.append(link)
-
+        links = [
+            rtb.RevoluteDH(d=d[i], a=a[i], alpha=alpha[i], offset=offset[i], qlim=qlim[i])
+            for i in range(6)
+        ]
         return links
 
     # ----------------------------------------------------------------------
     def add_to_env(self, env):
-        """Add robot + grippers to the Swift environment."""
         super().add_to_env(env)
         self._env = env
         env.add(self._left_finger)
@@ -94,7 +90,6 @@ class Serverbot(DHRobot3D):
 
     # ----------------------------------------------------------------------
     def _update_fingers(self):
-        """Update finger transforms relative to the TCP."""
         tcp = self.fkine(self.q)
         gap = self._finger_gap
         self._left_finger.T = (tcp * SE3(0, gap + 0.005, 0) * SE3.Ry(pi)).A
@@ -102,7 +97,6 @@ class Serverbot(DHRobot3D):
 
     # ----------------------------------------------------------------------
     def open_gripper(self, speed=0.02):
-        """Open the gripper smoothly."""
         for g in np.linspace(self._finger_gap, self._finger_open, 20):
             self._finger_gap = g
             self._update_fingers()
@@ -111,7 +105,6 @@ class Serverbot(DHRobot3D):
 
     # ----------------------------------------------------------------------
     def close_gripper(self, speed=0.02):
-        """Close the gripper smoothly."""
         for g in np.linspace(self._finger_gap, self._finger_closed, 20):
             self._finger_gap = g
             self._update_fingers()
@@ -120,16 +113,14 @@ class Serverbot(DHRobot3D):
 
     # ----------------------------------------------------------------------
     def test(self):
-        """Simple movement test for debugging."""
         env = swift.Swift()
         env.launch(realtime=True)
         self.add_to_env(env)
 
         q_start = self.q
         q_goal = [q_start[i] + pi / 6 for i in range(len(q_start))]
-        q_goal[0] = -0.6  # move the rail
-
         traj = rtb.jtraj(q_start, q_goal, 40).q
+
         for q in traj:
             self.q = q
             self._update_fingers()
