@@ -27,7 +27,7 @@ class RobotController:
 
         for i in range(num_attempts):
             if i == 0 and initial_q_guess is not None:
-                q_guess = np.deg2rad(initial_q_guess) if len(initial_q_guess) == len(robot.q) else robot.q
+                q_guess = (initial_q_guess) if len(initial_q_guess) == len(robot.q) else robot.q
             else:
                 q_guess = np.random.uniform(low=min_limits, high=max_limits)
 
@@ -122,6 +122,16 @@ class RobotController:
         
         print(f"✓ {name}")
         return q_target
+    
+    def animate_trajectory(self, robot, start_q, end_q, steps, carry_object=None):
+        """Generic trajectory animation function."""
+        q_path = rtb.jtraj(start_q, end_q, steps).q
+        for q_config in q_path:
+            robot.q = np.clip(q_config, robot.qlim[0, :], robot.qlim[1, :])
+            if carry_object is not None:
+                T_tcp = robot.fkine(q_config)
+                carry_object.T = T_tcp.A
+            self.env.step(self.scene.SIM_STEP_TIME)
 
     def print_pose(self, robot, label=""):
         """Print current pose info."""
