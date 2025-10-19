@@ -13,14 +13,14 @@ from Serverbot import Serverbot
 from EnvironmentSetup import Scene
 import sequences as seq
 
-# --- SETUP ---
+# Environment setup
 env = swift.Swift()
 env.launch(realtime=True)
 env.set_camera_pose([0, 3, 4], [0, 0, 0.5])
 scene = Scene(env)
 controller = RobotController(env, scene)
 
-# --- ROBOT CREATION & PLACEMENT ---
+# Robot creation and placement
 robot1 = GlassBot()
 robot1.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]
 robot1.add_to_env(env)
@@ -40,7 +40,7 @@ robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"]
 robot4.q = np.array([0,-pi/2,0,0,0,0])
 robot4.add_to_env(env)
 
-# --- RUN SEQUENCES ---
+# Run sequences
 seq.run_robot1_sequence1(controller, robot1, scene)
 seq.run_robot2_sequence1(controller, robot2, scene)
 seq.run_robot3_sequence1(controller, robot3, scene)
