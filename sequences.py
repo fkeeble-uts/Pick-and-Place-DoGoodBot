@@ -38,7 +38,6 @@ def run_robot1_sequence1(controller, robot1, scene):
 
     robot1.q = R1_GUESSES["HOME"]
     controller.print_pose(robot1, "R1 at HOME")
-    time.sleep(0.5)
 
     # Step 1: Move to a hover position above the glass
     print("\n[R1] Moving to hover above glass...")
@@ -59,7 +58,6 @@ def run_robot1_sequence1(controller, robot1, scene):
     
     # Step 3: Pick up the object
     controller.pickup_object(robot1, target_glass)
-    time.sleep(1) # Simulate gripper closing
     
     # Step 4: Lift the glass vertically
     print("\n[R1] Lifting glass...")
