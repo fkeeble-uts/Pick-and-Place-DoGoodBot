@@ -197,17 +197,17 @@ class Scene:
 
         # --- Drinks on drink shelf ---
         self.drink_poses = []
-        drink_radius = 0.05
-        drink_height = 0.2
+        self.drink_radius = 0.05
+        self.drink_height = 0.2
         drink_color = [0, 0, 0.4, 0.7]
         drink_count = 9
-        drink_gaps = (2 - drink_radius) / drink_count + 0.03
+        drink_gaps = (2 - self.drink_radius) / drink_count + 0.03
 
         for i in range(drink_count):
             pose = SE3(1 - drink_gaps * i, self.table3_center_y, 
-                       self.table3_height + drink_height/2)
-            drink = Cylinder(radius=drink_radius,
-                             length=drink_height,
+                       self.table3_height + self.drink_height/2)
+            drink = Cylinder(radius=self.drink_radius,
+                             length=self.drink_height,
                              color=drink_color,
                              pose=pose)
             self.env.add(drink)
