@@ -146,20 +146,8 @@ print("\n" + "="*70)
 print(">>> ROBOT 2: MOVING TO DRINK 4 <<<")
 print("="*70 + "\n")
 
-time.sleep(1.0)
-
-print("[R2] Moving to drinks shelf...")
-print("Target pose of drink 3:")
-print(scene.drink_poses[3])
-print("Drinkbot pose:")
-print(scene.ROBOT_BASE_POSES["R2_ALCOHOL"])
-print("Relative pose from drinkbot to drink 4:")
-print(scene.drink_poses[3]-scene.ROBOT_BASE_POSES["R2_ALCOHOL"])
-
 # Step 7: Move to drink 4
 print("\n[R2] Moving to drink 4...")
-target_r2_pose = scene.drink_poses[3] @ SE3.Rx(pi/2)
-print(target_r2_pose)
 target_r2_pose = scene.drink_poses[3] @ SE3.Ty(scene.drink_radius) @ SE3.Rx(pi/2)
 print(target_r2_pose)
 hover_q_r2, success = controller.find_ikine(robot2, target_r2_pose, R2_POSES["PICKUP_DRINK"], "y", False, 0.5)
