@@ -1,5 +1,3 @@
-# robot_helpers.py
-
 import numpy as np
 import roboticstoolbox as rtb
 import logging
@@ -12,7 +10,7 @@ class RobotController:
 
     def find_ikine(self, robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False, hover_max=None):
         """
-        Generalized IK function with a robust hover-zone check for x, y, or z axes.
+        Generalized IK function with a hover-zone check for x, y, or z axes.
         """
         num_attempts = 100
         min_limits = robot.qlim[0, :]
@@ -39,7 +37,6 @@ class RobotController:
                 solution = ik_result.q
                 if np.all((solution >= min_limits) & (solution <= max_limits)):
                     
-                    # --- NEW GENERALIZED HOVER VALIDATION BLOCK ---
                     # Check if this is a hover-find call for a specific axis
                     if hover_max is not None and ignore_var in coord_map:
                         axis_index = coord_map[ignore_var]
@@ -75,7 +72,7 @@ class RobotController:
     def move_to_q(self, robot, q_target, steps=None, name="", carry_object=None):
         """Move robot to target joint angles, optionally carrying an object."""
         if steps is None:
-            steps = self.scene.TRAJ_STEPS  # <-- Use self.scene
+            steps = self.scene.TRAJ_STEPS
 
         q_start = robot.q.copy()
         q_target = self.wrap_to_near(q_target, q_start)
@@ -88,7 +85,7 @@ class RobotController:
             if carry_object is not None:
                 T_tcp = robot.fkine(q)
                 carry_object.T = T_tcp.A
-            self.env.step(self.scene.SIM_STEP_TIME) # <-- Use self.env and self.scene
+            self.env.step(self.scene.SIM_STEP_TIME)
         
         print(f"✓ {name}")
         return q_target
