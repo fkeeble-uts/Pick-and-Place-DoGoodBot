@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 # II. ROBOT CLASS DEFINITION
 # ----------------------------------------------------
 
-class Drinkbot(DHRobot3D):
+class IngredientBot(DHRobot3D):
     def __init__(self):
         links = self._create_DH()
         link3D_names = dict(
