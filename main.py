@@ -95,8 +95,6 @@ robot1.q = q_now_r1
 controller.print_pose(robot1, "R1 at HOME")
 time.sleep(0.5)
 
-# quoting out r1 movement temporarily to debug r2 movement
-'''
 # Step 1: Approach glass
 print("\n[R1] Approaching glass...")
 q_now_r1 = controller.move_to_q(robot1, R1_POSES["GLASS_APPROACH"], steps=50, name="Glass Approach")
@@ -136,7 +134,7 @@ q_now_r1 = controller.move_to_q(robot1, R1_POSES["HANDOFF"], steps=60, name="Han
                       carry_object=target_glass)
 controller.print_pose(robot1, "R1 at HANDOFF")
 time.sleep(0.5)
-'''
+
 
 # ============================================================================
 # ROBOT 2 SEQUENCE - ADD ALCOHOL TO GLASS
@@ -158,8 +156,6 @@ if success:
 else:
     print("Unable to move robot2 to hover pose")
 
-# ============================================================================
-# ROBOT 3 SEQUENCE - ADD INGREDIENTS
-# ============================================================================
+# 
 
 env.hold()
