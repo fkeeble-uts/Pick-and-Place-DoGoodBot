@@ -60,6 +60,8 @@ class Glassbot(DHRobot3D):
         self.q = qtest
         self._env = None
 
+        # temporarily removed grippers
+        '''
         # --------------------- Gripper setup --------------------- #
         self._finger_length = 0.08
         self._finger_thickness = 0.01
@@ -74,6 +76,7 @@ class Glassbot(DHRobot3D):
                                    color=[0.2, 0.8, 0.2, 1])
         self._right_finger = Cuboid([self._finger_length, self._finger_thickness, self._finger_height],
                                     color=[0.2, 0.8, 0.2, 1])
+        '''
 
     # -----------------------------------------------------------------------------------#
     def add_to_env(self, env):
