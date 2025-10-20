@@ -9,7 +9,7 @@ from spatialgeometry import Cuboid
 from roboticstoolbox import models
 
 
-class Serverbot:
+class ServerBot:
     def __init__(self):
         # Load standard UR3 from robotics toolbox
         self.robot = rtb.models.UR3()
@@ -89,5 +89,5 @@ class Serverbot:
 
 
 if __name__ == "__main__":
-    robot = Serverbot()
+    robot = ServerBot()
     robot.test()
