@@ -136,8 +136,10 @@ def run_robot2_sequence1(controller, robot2, scene):
     
     # Step 12: Pour the drink by rotating the wrist
     print("\n[R2] Pouring...")
+    print(f"Robot q before pouring: {np.rad2deg(robot2.q)}")
     pour_q = robot2.q.copy()
     pour_q[4] += np.deg2rad(115)
+    print(f"Robot q after pouring: {np.rad2deg(pour_q)}")
     controller.animate_trajectory(robot2, robot2.q, pour_q, steps=60)
     controller.print_pose(robot2, "R2 Finished Pouring")
 
