@@ -9,7 +9,7 @@ from robot_helpers import RobotController
 from DrinkBot import DrinkBot
 from IngredientBot import IngredientBot
 from GlassBot import GlassBot
-from Serverbot import Serverbot
+from ServerBot import ServerBot
 from EnvironmentSetup import Scene
 import sequences as seq
 
@@ -35,14 +35,14 @@ robot3.q = robot3.home_q
 robot3.base = scene.ROBOT_BASE_POSES["R3_MIXERS"]
 robot3.add_to_env(env)
 
-robot4 = Serverbot()
+robot4 = ServerBot()
 robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"] 
 robot4.q = np.array([0,-pi/2,0,0,0,0])
 robot4.add_to_env(env)
 
 # Run sequences
-seq.run_robot1_sequence1(controller, robot1, scene)
+# seq.run_robot1_sequence1(controller, robot1, scene)
 seq.run_robot2_sequence1(controller, robot2, scene)
-seq.run_robot3_sequence1(controller, robot3, scene)
+# seq.run_robot3_sequence1(controller, robot3, scene)
 
 env.hold()
