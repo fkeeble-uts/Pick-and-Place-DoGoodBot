@@ -45,7 +45,7 @@ robot3.add_to_env(env)
 
 # Robot 4: Server
 robot4 = ServerBot()
-robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"] * SE3.Rx(pi/2) * SE3.Ry(pi/2)
+robot4.base = scene.ROBOT_BASE_POSES["R4_SERVER"]
 robot4.add_to_env(env)
 
 # ============================================================================
@@ -152,7 +152,7 @@ def create_sliders(robot, sim_env):
 
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
-    ROBOT_TO_LOAD = "DrinkBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
+    ROBOT_TO_LOAD = "ServerBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
     RUN_IKINE = False  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
