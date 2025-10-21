@@ -113,7 +113,7 @@ class Scene:
 
         # --- Bar Mat Configuration  ---
         self.BAR_MAT_THICKNESS = 0.02 
-        self.BAR_MAT_LENGTH_X = 0.3                
+        self.BAR_MAT_LENGTH_X = 0.2                
         self.BAR_MAT_WIDTH_Y = 0.2                   
         self.BAR_MAT_COLOR = [0.1, 0.1, 0.1, 0.8]  
         self.BAR_MAT_Z_POS = self.table1_height + self.floor_height + self.BAR_MAT_THICKNESS / 2
@@ -124,6 +124,9 @@ class Scene:
             {"name": "Mat_A_R1_R2", "x": 1.1, "y": self.table1_center_y}, 
             # Mat B: Between R2  and R3 (Drinkbot) 
             {"name": "Mat_B_R2_R3", "x": -1.0, "y": self.table1_center_y},
+            # Mat C: On UR3 Desk 
+            {"name": "Mat_UR3", "x": 0.0, "y": self.table2_center_y-0.25},
+
         ]
 
         # --- Robot base poses ---

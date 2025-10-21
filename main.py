@@ -43,6 +43,6 @@ robot4.add_to_env(env)
 # Run sequences
 # seq.run_robot1_sequence1(controller, robot1, scene)
 seq.run_robot2_sequence1(controller, robot2, scene)
-# seq.run_robot3_sequence1(controller, robot3, scene)
+seq.run_robot3_sequence1(controller, robot3, robot2, scene)
 
 env.hold()

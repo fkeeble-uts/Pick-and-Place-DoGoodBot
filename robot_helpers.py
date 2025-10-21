@@ -10,6 +10,20 @@ class RobotController:
         self.scene = scene
         self.carried_object = None
         self.grasp_transform = None
+        self.carried_object_name = None
+        self.attachments = {}   
+
+    def attach_objects(self, parent_obj, child_obj):
+        if parent_obj is child_obj:
+            print("Cannot attach an object to itself")
+            return 
+        # Find relative transform for object being attached
+        T_world_parent = SE3(parent_obj.T)
+        T_world_child = SE3(child_obj.T)
+        T_rel = T_world_parent.inv() @ T_world_child
+        # store the attachement 
+        self.attachments.setdefault(parent_obj, []).append((child_obj, T_rel))
+        print("Attatched {child_obj.name} to {parent_obj.name}")
 
     def pickup_object(self, robot, obj_to_pickup):
         if self.carried_object is None:
@@ -17,7 +31,9 @@ class RobotController:
             T_world_object = SE3(obj_to_pickup.T)
             self.grasp_transform = T_world_tcp.inv() * T_world_object
             self.carried_object = obj_to_pickup
-            print(f"[{robot.name}] Picked up object.")
+            object_type = type(obj_to_pickup).__name__
+            self.carried_object_name = f"{object_type}"
+            print(f"[{robot.name}] Picked up object ({self.carried_object_name}).")
         else:
             print("Already carrying an object.")
 
@@ -26,18 +42,28 @@ class RobotController:
         if self.carried_object is not None:
             final_pose = SE3(self.carried_object.T)
             final_position = np.round(final_pose.t, 3)
-
+            parent_name = self.carried_object_name     
             self.carried_object = None
             self.grasp_transform = None
+            self.carried_object_name = None
 
-            print(f"[{robot.name}] Dropped object at position: {final_position}")
+            has_attachments = self.carried_object in self.attachments
+            children_list = " (and attached objects)" if has_attachments else ""
+            print(f"[{robot.name}] Dropped '{parent_name}'{children_list} at position: {final_position}")
         else:
              print(f"[{robot.name}] Not carrying any object to drop.")
 
     def _update_carried_object_pose(self, robot):
         if self.carried_object is not None:
             T_world_tcp = robot.fkine(robot.q)
-            self.carried_object.T = (T_world_tcp @ self.grasp_transform).A
+            T_world_new_parent = T_world_tcp @ self.grasp_transform
+            self.carried_object.T = T_world_new_parent.A
+            
+            if self.carried_object in self.attachments:
+                for child_obj, T_rel in self.attachments[self.carried_object]:
+                    T_world_new_child = T_world_new_parent @ T_rel
+                    child_obj.T = T_world_new_child.A
+
 
     def find_ikine(self, robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False, hover_max=None):
         num_attempts = 300
