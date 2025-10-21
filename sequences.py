@@ -13,11 +13,11 @@ R1_GUESSES = {
 }
 R2_GUESSES = {
     "HOME": np.deg2rad(np.array([-90., 0., 0., 0., 0., 0.])),
-    "PICKUP_DRINK": np.deg2rad(np.array([-74.207, 141.295, -31.751, 9.875, 103.964, -24.255])),
+    "PICKUP_DRINK": np.deg2rad(np.array([-64.77, 141.16, -61.41, 27.03, 69.68, -79.95])),
     "PRE_POUR_AWAY": np.deg2rad(np.array([0, 142.39, -64.67, 0, 66.05, -77.03])),
     "POUR_HOVER": np.deg2rad(np.array([-0.55, 133.68, -32.24, -0.57, 104.09, -89.86])),
-    "POUR_DRINK": np.deg2rad(np.array([0, 116, -31, 0, 240, -90])),
-    "PLACE_GLASS": np.deg2rad(np.array([0, 25.495, 174.686, 0, -208, 0]))
+    "GLASS_HOVER": np.deg2rad(np.array([-180, 15, 112, 0, 94, 0])),
+    "GLASS_DROP_HOVER": np.deg2rad(np.array([0.49, 19.42, 128.59, 0.0, 109.17, -179.51]))
 }
 R3_GUESSES = {
     "HOME": np.deg2rad(np.array([180., 0., 0., 0., 0., 0.])),
@@ -106,9 +106,10 @@ def run_robot2_sequence1(controller, robot2, scene):
     if not success:
         print("❌ [R2] Failed to find hover path to drink.")
         return
-
     controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
+    controller.print_pose(robot2, "R2 Hovering in front of glass")
     controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    controller.print_pose(robot2, "R2 Gripping glass")
 
     # Step 2: Pick up the drink
     controller.pickup_object(robot2, target_drink)
@@ -165,14 +166,55 @@ def run_robot2_sequence1(controller, robot2, scene):
     controller.move_cartesian(robot2, robot2.q, retract_pose, 50)
     controller.print_pose(robot2, "R2 Retracted")
 
-    # Step 10: Move back to glass
-    print("\n[R2] Moving to glass...")
+    # Step 10: Swing back to above glass
+    print("\n[R2] Swinging around to glass...")
+    controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["GLASS_HOVER"], steps=60)
+    controller.print_pose(robot2, "R2 near glass")
+
+    # Step 11: Refine position above glass
+    print("\n[R2] Moving back to glass...")
     target_r2_pose = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"] @ SE3(-0.5, 0, scene.glass_height + scene.BAR_MAT_THICKNESS) @ SE3.Ry(pi)
-    final_q, success = controller.find_ikine(robot2, pour_pose, initial_q_guess=robot2.q)
+    final_q, success = controller.find_ikine(robot2, target_r2_pose, 
+                                             R2_GUESSES["POUR_HOVER"], "z", False, 0.5)
 
     if not success:
         print("❌ [R2] Unable to find a valid path to the pouring position.")
         return
+
+    controller.animate_trajectory(robot2, robot2.q, final_q, steps=60)
+    controller.print_pose(robot2, "R2 Hovering above glass")
+
+    # Step 11: Move down to glass
+    print("\n[R2] Moving down to glass...")
+    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    glass_index = 3
+    target_glass = scene.glass_objects[glass_index]
+    controller.pickup_object(robot2, target_glass)
+
+    # Step 11: Move up with glass
+    print("\n[R2] Moving up with glass...")
+    target_r2_pose = target_r2_pose @ SE3.Tz(-0.2)
+    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+
+    # Step 12: Swing around to hover glass over table
+    print("\n[R2] Swinging around with glass...")
+    controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["GLASS_DROP_HOVER"], steps=60)
+    controller.print_pose(robot2, "R2 hovering with glass")
+
+    # Step 13: Refine hover position with glass
+    print("\n[R1] bringing glass to correct hover position...")
+    r2_target = scene.ROBOT_BASE_POSES["R3_MIXERS"] @ SE3(0.6, 0, scene.glass_height + scene.BAR_MAT_THICKNESS) @ SE3.Ry(pi)
+    r2_q_hover, success = controller.find_ikine(robot2, r2_target, 
+                                                R2_GUESSES["GLASS_DROP_HOVER"], "z", False, 0.5)
+    if not success:
+        print("❌ [R1] Failed to find path to workstation.")
+        return
+    controller.animate_trajectory(robot2, robot2.q, r2_q_hover, steps=60)
+    controller.print_pose(robot2, "R2 at hover before placing glass down")
+
+    # Step 14: Place glass down
+    controller.move_cartesian(robot2, robot2.q, r2_target, 50)
+    controller.print_pose(robot2, "R2 after placing glass down")
 
 def run_robot3_sequence1(controller, robot3, scene):
     """Executes the ingredient adding sequence for Robot 3 (IngredientBot)."""
