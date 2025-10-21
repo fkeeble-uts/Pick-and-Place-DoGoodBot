@@ -154,6 +154,7 @@ if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "IngredientBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
     RUN_IKINE = False  # False for sliders, True for IK test
+    INITIAL_Q_TEACH_MODE = np.array([0.49, -26.67, 31.79, 0.0, 58.46, -179.51])
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "DrinkBot":
@@ -217,7 +218,14 @@ if __name__ == "__main__":
 
     else:
         print(f"Running TEACH mode for {ROBOT_TO_LOAD}...")
+        if len(INITIAL_Q_TEACH_MODE) == robot_arm.n:
+             robot_arm.q = np.deg2rad(INITIAL_Q_TEACH_MODE)
+             print(f"Set initial Teach Mode state (deg): {INITIAL_Q_TEACH_MODE}")
+        else:
+             print(f"Warning: INITIAL_Q_TEACH_MODE length doesn't match robot joints. Using default.")
+
         create_sliders(robot_arm, env)
+        
 
     # --- Keep simulation open ---
     print("\nPress Ctrl+C in the terminal to exit.")

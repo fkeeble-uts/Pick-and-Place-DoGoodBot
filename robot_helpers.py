@@ -113,6 +113,7 @@ class RobotController:
     def print_pose(self, robot, label=""):
         print(f"\n{label}")
         q_deg = np.round(np.rad2deg(robot.q), 2)
+        q_deg = q_deg.tolist()
         T = robot.fkine(robot.q)
         print(f"  Joints (deg): {q_deg}")
         print(f"  TCP Pos: {np.round(T.t, 3)}")
