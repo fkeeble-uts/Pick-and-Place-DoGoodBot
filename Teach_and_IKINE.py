@@ -152,7 +152,7 @@ def create_sliders(robot, sim_env):
 
 if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
-    ROBOT_TO_LOAD = "DrinkBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
+    ROBOT_TO_LOAD = "IngredientBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
     RUN_IKINE = False  # False for sliders, True for IK test
 
     # --- ROBOT SELECTION ---
