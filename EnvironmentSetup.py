@@ -216,9 +216,9 @@ class Scene:
         # --- Glasses ---
         self.glass_objects = []
         self.glass_poses = []
-        glass_radius = 0.025
-        self.glass_height = 0.1
-        glass_color = [1.0, 0.4, 0.0, 0.7]
+        glass_radius = 0.05
+        self.glass_height = 0.2
+        glass_color = [0.8, 0.8, 0.8, 0.6]
 
         width_fractions = [0.1, 0.5, 0.9]
         length_fractions = [0.1, 0.5, 0.9]
