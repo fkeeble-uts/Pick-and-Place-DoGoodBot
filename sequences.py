@@ -17,7 +17,9 @@ R2_GUESSES = {
     "PRE_POUR_AWAY": np.deg2rad(np.array([0, 142.39, -64.67, 0, 66.05, -77.03])),
     "POUR_HOVER": np.deg2rad(np.array([-0.55, 133.68, -32.24, -0.57, 104.09, -89.86])),
     "GLASS_HOVER": np.deg2rad(np.array([-180, 15, 112, 0, 94, 0])),
-    "GLASS_DROP_HOVER": np.deg2rad(np.array([0.49, 19.42, 128.59, 0.0, 109.17, -179.51]))
+    "GLASS_DROP_HOVER": np.deg2rad(np.array([0.49, 19.42, 128.59, 0.0, 109.17, -179.51])),
+    "GLASS_HANDOVER_PICKUP": np.deg2rad(np.array([0, 138.77, -16.77, -0.0, -155.53, -90.43])),
+    "GLASS_HANDOVER_HOVER" : np.deg2rad(np.array([89.57, 128.63, -16.52, 0.0, -145.15, -90.43]))
 }
 R3_GUESSES = {
     "HOME": np.deg2rad(np.array([180., 0., 0., 0., 0., 0.])),
@@ -234,6 +236,7 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     PLACEMENT_DEPTH = 0.04
     X_GLASS, Y_GLASS, Z_GLASS = -1.0, -0.575, 1.2
     VERTICAL_ORIENTATION = SE3.Rx(pi)
+    X_UR3_MAT, Y_UR3_MAT, Z_UR3_MAT = 0, 0.55, 1 #0.62
 
 
     # Target Objects & Poses
@@ -242,6 +245,8 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     HOVER_POSE = PICK_POSE @ SE3.Tz(-HOVER_HEIGHT_R3)
     PLACE_POSE = SE3(X_GLASS, Y_GLASS, Z_GLASS) @ SE3.Tz(PLACEMENT_DEPTH) @ SE3.Ry(pi)
     DROP_POSE = PLACE_POSE @ SE3.Tz(DROP_HEIGHT_R3)
+    UR3_MAT_POSE = SE3(X_UR3_MAT, Y_UR3_MAT, Z_UR3_MAT) 
+    
 
     # Step 1: Approach the Chosen Ingredients 
     print("\n[R3] Approaching cube...")
@@ -293,7 +298,7 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     print("\n[R2] Drink Handover...")
     r2_target = scene.ROBOT_BASE_POSES["R3_MIXERS"] @ SE3(0.6, 0, scene.glass_height + scene.BAR_MAT_THICKNESS) @ SE3.Ry(pi)
     r2_q_hover, success = controller.find_ikine(robot2, r2_target, 
-                                                R2_GUESSES["GLASS_DROP_HOVER"], "z", False, 0.5)
+                                                R2_GUESSES["GLASS_HANDOVER_PICKUP"])#, "z", False, 0.5)
     if not success:
         print("❌ [R2] Failed to find path to workstation.")
         return
@@ -303,8 +308,9 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     # Step 9: Robot 2 picks up complete drink
     glass_index = 3
     target_glass = scene.glass_objects[glass_index]
-    controller.pickup_object(robot2, cube_target)
+    controller.attach_objects(target_glass, cube_target)
     controller.pickup_object(robot2, target_glass)
+    
     print("\n[R3] Retracting for handover...")
     HOVER_R2 = robot2.fkine(robot2.q) @ SE3.Tz(-0.3)
     controller.move_cartesian(robot2, robot2.q, HOVER_R2, 80)
@@ -315,13 +321,31 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     print("\n[R2] Rotating...")
     print(f"Robot q before turning: {np.rad2deg(robot2.q)}")
     spin_q_r2 = robot2.q.copy()
-    spin_q_r2[0] -= np.deg2rad(90)
+    spin_q_r2[0] -= np.deg2rad(93)
     print(f"Robot q after turning: {np.rad2deg(spin_q_r2)}")
     controller.animate_trajectory(robot2, robot2.q, spin_q_r2, steps=60)
     controller.print_pose(robot2, "R2 Finished Rotating")
 
 
+    # Step 11: Refine hover position with glass
+    print("\n[R1] bringing glass to correct hover position...")
+    r2_target_final = UR3_MAT_POSE @ SE3(0, 0, scene.glass_height + scene.BAR_MAT_THICKNESS*2) @ SE3.Ry(pi)
+    r2_q_hover_final, success = controller.find_ikine(robot2, r2_target_final, 
+                                                R2_GUESSES["GLASS_HANDOVER_HOVER"], "z", False, 0.5)
+    if not success:
+        print("❌ [R1] Failed to find path to workstation.")
+        return
+    controller.animate_trajectory(robot2, robot2.q, r2_q_hover_final, steps=60)
+    controller.print_pose(robot2, "R2 at hover before placing glass down")
 
+    # Step 12: Place glass down
+    controller.move_cartesian(robot2, robot2.q, r2_target_final, 50)
+    controller.drop_object(robot2)
+    controller.print_pose(robot2, "R2 after placing glass down")
+
+    #Step 13: Return to Home Position
+    controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["HOME"], steps=60)
+    controller.print_pose(robot2, "R2 in safe home position")
 
 
 
