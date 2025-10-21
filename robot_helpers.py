@@ -22,10 +22,17 @@ class RobotController:
             print("Already carrying an object.")
 
     def drop_object(self, robot):
+        """'Detaches' the object from the robot and prints its final location."""
         if self.carried_object is not None:
+            final_pose = SE3(self.carried_object.T)
+            final_position = np.round(final_pose.t, 3)
+
             self.carried_object = None
             self.grasp_transform = None
-            print(f"[{robot.name}] Dropped object.")
+
+            print(f"[{robot.name}] Dropped object at position: {final_position}")
+        else:
+             print(f"[{robot.name}] Not carrying any object to drop.")
 
     def _update_carried_object_pose(self, robot):
         if self.carried_object is not None:
@@ -33,7 +40,7 @@ class RobotController:
             self.carried_object.T = (T_world_tcp @ self.grasp_transform).A
 
     def find_ikine(self, robot, target_tr, initial_q_guess=None, ignore_var="", ignore_rotation=False, hover_max=None):
-        num_attempts = 100
+        num_attempts = 300
         min_limits = robot.qlim[0, :]
         max_limits = robot.qlim[1, :]
         mask = [1, 1, 1, 1, 1, 1]
