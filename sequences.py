@@ -24,7 +24,9 @@ R3_GUESSES = {
     "PICKUP_YELLOW": np.deg2rad(np.array([0, 47, 73, -32, 91, 0])),
     "PICKUP_GREEN": np.deg2rad(np.array([-20, 47, 65, -30, 89, 0])),
     "PICKUP_BLUE": np.deg2rad(np.array([-34, 53, 65, -30, 89, 0])),
-    "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([0, 0, 0, 0, 0, 0]))
+    "PICKUP_HOVER": np.deg2rad(np.array([2.45, 35.93, 56.66, -2.59, 90, -87.55])),
+    "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([177.55, 35.93, 56.66, -2.59, 90, -87.55])),
+    "DROP_INGREDIENTS" : np.deg2rad(np.array([25.4, -35.93, -56.66, 2.59, -90, -64.6]))
 }
 
 def run_robot1_sequence1(controller, robot1, scene):
@@ -180,56 +182,55 @@ def run_robot3_sequence1(controller, robot3, scene):
 
     # Configuration
     CUBE_INDEX = 8
-    HOVER_HEIGHT_R3 = 0.08
+    HOVER_HEIGHT_R3 = 0.1
     DROP_HEIGHT_R3 = 0.2
     PLACEMENT_DEPTH = 0.05
-    X_GLASS, Y_GLASS, Z_GLASS = -0.9, 0, 1.1
+    X_GLASS, Y_GLASS, Z_GLASS = -1.0, -0.575, 1.1
+    VERTICAL_ORIENTATION = SE3.Rx(pi)
+
 
     # Target Objects & Poses
     cube_target = scene.cube_objects[CUBE_INDEX]
-    VERTICAL_ORIENTATION = SE3.Rx(pi)
-    PICK_POSE = scene.cube_poses[CUBE_INDEX] @ VERTICAL_ORIENTATION 
+    PICK_POSE = scene.cube_poses[CUBE_INDEX] @ VERTICAL_ORIENTATION
     HOVER_POSE = PICK_POSE @ SE3.Tz(-HOVER_HEIGHT_R3)
-    PLACE_POSE = SE3(X_GLASS, Y_GLASS, Z_GLASS) @ SE3.Tz(PLACEMENT_DEPTH) @ VERTICAL_ORIENTATION
+    PLACE_POSE = SE3(X_GLASS, Y_GLASS, Z_GLASS) @ SE3.Tz(PLACEMENT_DEPTH) @ SE3.Ry(pi)
     DROP_POSE = PLACE_POSE @ SE3.Tz(DROP_HEIGHT_R3)
 
-    # Step 1: Move to initial hover position
+    # Step 1: Approach the Chosen Ingredients 
     print("\n[R3] Approaching cube...")
-    controller.animate_trajectory(robot3, robot3.q, R3_GUESSES["PICKUP_YELLOW"], steps=60)
-    controller.print_pose(robot3, f"R3 at Hover before Cube {CUBE_INDEX}")
+    hover_q_r3, success = controller.find_ikine(robot3, PICK_POSE, R3_GUESSES["PICKUP_YELLOW"], "z", False, 0.5)
+    if not success:
+        print("❌ [R2] Failed to find path to ingredients.")
+        return
 
-    # Step 2: Move down to the Pick Pose
-    print("\n[R3] Moving to pick position...")
-    controller.move_cartesian(robot3, robot3.q, PICK_POSE, 50)
-    controller.print_pose(robot3, "R3 at Pick Position")
+    controller.animate_trajectory(robot3, robot3.q, hover_q_r3, steps=60)
+    controller.print_pose(robot3, f"R3 at Hover before Cube {CUBE_INDEX}")
 
     # Step 3: Pick up the object
     controller.pickup_object(robot3, cube_target)
 
     # Step 4: Retract back to Hover Pose
     print("\n[R3] Retracting to hover...")
-    controller.move_cartesian(robot3, robot3.q, HOVER_POSE, 50)
+    HOVER_R3 = robot3.fkine(robot3.q) @ SE3.Tz(-0.2)
+    controller.move_cartesian(robot3, robot3.q, HOVER_R3, 80)
     controller.print_pose(robot3, "R3 Retracted")
 
-    # Step 5: Swing around to the drop hover position
-    print("\n[R3] Swinging to drop area...")
-    controller.animate_trajectory(robot3, robot3.q, R3_GUESSES["DEPOSIT_INGREDIENTS"], steps=80)
+    # Step 5: Swing aroud to drop ingredients 
+    print("\n[R3] Rotating...")
+    print(f"Robot q before turning: {np.rad2deg(robot3.q)}")
+    spin_q = robot3.q.copy()
+    spin_q[0] += np.deg2rad(170)
+    print(f"Robot q after pouring: {np.rad2deg(spin_q)}")
+    controller.animate_trajectory(robot3, robot3.q, spin_q, steps=60)
+    controller.print_pose(robot3, "R2 Finished Rotating")
+
+    # Step 5: Lower Down to Deposit Ingredients
+    print("\n[R3] Depositing Ingredients...")
+    drop_q_r3, success = controller.find_ikine(robot3, PLACE_POSE, R3_GUESSES["DEPOSIT_INGREDIENTS"], "z", False, 0.5)
+    if not success:
+        print("❌ [R2] Failed to find path to ingredients.")
+        return
+
+    controller.animate_trajectory(robot3, robot3.q, drop_q_r3, steps=80)
     controller.print_pose(robot3, "R3 at Drop Hover")
 
-    # Step 6: Move down to the Place Pose inside glass
-    print("\n[R3] Placing cube in glass...")
-    controller.move_cartesian(robot3, robot3.q, PLACE_POSE, 50)
-    controller.print_pose(robot3, "R3 at Place Position")
-
-    # Step 7: Release the object (Corrected from release_object)
-    controller.drop_object(robot3) 
-    print(f"Cube {CUBE_INDEX} released.")
-
-    # Step 8: Retract back to Drop Hover Pose
-    print("\n[R3] Retracting from glass...")
-    controller.move_cartesian(robot3, robot3.q, DROP_POSE, 50)
-
-    # Step 9: Move to home position
-    print("\n[R3] Returning to home...")
-    controller.animate_trajectory(robot3, robot3.q, R3_GUESSES["HOME"], steps=60)
-    controller.print_pose(robot3, "R3 at Home")
