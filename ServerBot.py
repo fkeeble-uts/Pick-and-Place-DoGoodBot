@@ -1,93 +1,73 @@
-import time
-import numpy as np
+##  @file
+#   @brief UR3 Robot defined by standard DH parameters with 3D model
+#   @author Ho Minh Quang Ngo
+#   @date Jul 20, 2023
+
 import swift
 import roboticstoolbox as rtb
 import spatialmath.base as spb
 from spatialmath import SE3
+from ir_support.robots.DHRobot3D import DHRobot3D
+import time
+import os
+import numpy as np
+
+# Useful variables
 from math import pi
-from spatialgeometry import Cuboid
-from roboticstoolbox import models
 
-
-class ServerBot:
+# -----------------------------------------------------------------------------------#
+class ServerBot(DHRobot3D):
     def __init__(self):
-        # Load standard UR3 from robotics toolbox
-        self.robot = rtb.models.UR3()
-        
-        # Gripper configuration
-        self._finger_gap = 0.035
-        self._finger_open = 0.035
-        self._finger_closed = 0.014
-        self._left_finger = Cuboid(scale=[0.1, 0.01, 0.05], color="green")
-        self._right_finger = Cuboid(scale=[0.1, 0.01, 0.05], color="green")
-        self._env = None
 
-    # ----------------------------- GRIPPER CONTROL -----------------------------
-    @property
-    def q(self):
-        return self.robot.q
-    
-    @q.setter
-    def q(self, value):
-        self.robot.q = value
-    
-    @property
-    def base(self):
-        return self.robot.base
-    
-    @base.setter
-    def base(self, value):
-        self.robot.base = value
+        # DH links
+        links = self._create_DH()
 
-    def add_to_env(self, env):
-        env.add(self.robot, readonly=False)
-        self._env = env
-        env.add(self._left_finger)
-        env.add(self._right_finger)
-        self._update_fingers()
+        # Names of the robot link files in the directory
+        link3D_names = dict(link0 = 'base_ur3',
+                            link1 = 'shoulder_ur3',
+                            link2 = 'upperarm_ur3',
+                            link3 = 'forearm_ur3',
+                            link4 = 'wrist1_ur3',
+                            link5 = 'wrist2_ur3',
+                            link6 = 'wrist3_ur3')
 
-    def _update_fingers(self):
-        tcp = self.robot.fkine(self.robot.q)
-        gap = self._finger_gap
-        self._left_finger.T = (tcp * SE3(0, gap + 0.005, 0) * SE3.Ry(pi)).A
-        self._right_finger.T = (tcp * SE3(0, -gap - 0.005, 0) * SE3.Ry(pi)).A
+        # A joint config and the 3D object transforms to match that config
+        qtest = [0,-pi/2,0,0,0,0]
+        qtest_transforms = [spb.transl(0,0,0),
+                            spb.transl(0,0,0.15239) @ spb.trotz(pi),
+                            spb.transl(0,-0.12,0.1524) @ spb.trotz(pi),
+                            spb.transl(0,-0.027115,0.39583) @ spb.trotz(pi),
+                            spb.transl(0,-0.027316,0.60903) @ spb.rpy2tr(0,-pi/2,pi, order = 'xyz'),
+                            spb.transl(0.000389,-0.11253,0.60902) @ spb.rpy2tr(0,-pi/2,pi, order= 'xyz'),
+                            spb.transl(-0.083765,-0.11333,0.61096) @ spb.trotz(pi)]
 
-    def open_gripper(self, speed=0.02):
-        for g in np.linspace(self._finger_gap, self._finger_open, 20):
-            self._finger_gap = g
-            self._update_fingers()
-            if self._env:
-                self._env.step(speed)
+        current_path = os.path.abspath(os.path.dirname(__file__))
+        link3d_path = os.path.join(current_path, "3D Robot Assets")
+        super().__init__(links, link3D_names, name = 'UR3', link3d_dir = link3d_path, qtest = qtest, qtest_transforms = qtest_transforms)
 
-    def close_gripper(self, speed=0.02):
-        for g in np.linspace(self._finger_gap, self._finger_closed, 20):
-            self._finger_gap = g
-            self._update_fingers()
-            if self._env:
-                self._env.step(speed)
+        qlim_deg = np.array([
+            [-360, -207, -155, -144, -180, -360],
+            [360,  27,  155,  127,  270,  360]
+        ])
+        self.qlim = np.deg2rad(qlim_deg)
 
-    # ----------------------------- TESTING -----------------------------
-    def test(self):
-        env = swift.Swift()
-        env.launch(realtime=True)
-        self.add_to_env(env)
+        self.q = qtest
 
-        q_start = self.robot.q
-        q_goal = [q_start[i] + pi / 6 for i in range(len(q_start))]
-        traj = rtb.jtraj(q_start, q_goal, 40).q
+    # -----------------------------------------------------------------------------------#
+    def _create_DH(self):
+        """
+        Create robot's standard DH model
+        """
+        a = [0, -0.24365, -0.21325, 0, 0, 0]
+        d = [0.1519, 0, 0, 0.11235, 0.08535, 0.0819]
+        alpha = [pi/2, 0, 0, pi/2, -pi/2, 0]
+        qlim = [[-2*pi, 2*pi] for _ in range(6)]
+        links = []
+        for i in range(6):
+            link = rtb.RevoluteDH(d=d[i], a=a[i], alpha=alpha[i], qlim= qlim[i])
+            links.append(link)
+        return links
 
-        for q in traj:
-            self.robot.q = q
-            self._update_fingers()
-            env.step(0.02)
-
-        self.close_gripper()
-        time.sleep(1)
-        self.open_gripper()
-        print("Sim Successful")
-        env.hold()
-
-
+# ---------------------------------------------------------------------------------------#
 if __name__ == "__main__":
     robot = ServerBot()
-    robot.test()
