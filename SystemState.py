@@ -67,7 +67,7 @@ class SequenceProgress:
         with self._lock:
             self.current_sequence = sequence_id
             self.current_checkpoint = checkpoint_num
-            print(f"📍 CHECKPOINT: {sequence_id} - Step {checkpoint_num}")
+            print(f"CHECKPOINT: {sequence_id} - Step {checkpoint_num}")
     
     def should_skip_checkpoint(self, sequence_id: str, checkpoint_num: int) -> bool:
         """
@@ -103,7 +103,7 @@ class SequenceProgress:
             self.current_sequence = None
             self.current_checkpoint = 0
             self.sequence_complete = False
-            print("🔄 Sequence progress RESET")
+            print("Sequence progress RESET")
     
     def get_status(self) -> str:
         """Get human-readable progress status"""
