@@ -154,7 +154,7 @@ if __name__ == "__main__":
     # --- CONTROL SWITCHES ---
     ROBOT_TO_LOAD = "DrinkBot"  # Options: "IngredientBot", "DrinkBot", "GlassBot", "ServerBot"
     RUN_IKINE = False  # False for sliders, True for IK test
-    INITIAL_Q_TEACH_MODE = np.array([-90, 15, 112, 0, 94, 0])
+    INITIAL_Q_TEACH_MODE = np.array([-179.56, -9.06, 59.98, -0.0, 69.05, 0.44])
 
     # --- ROBOT SELECTION ---
     if ROBOT_TO_LOAD == "DrinkBot":
