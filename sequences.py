@@ -31,7 +31,7 @@ R3_GUESSES = {
     "DROP_INGREDIENTS" : np.deg2rad(np.array([25.4, -35.93, -56.66, 2.59, -90, -64.6]))
 }
 
-def run_robot1_sequence1(controller, robot1, scene):
+def run_sequence1(controller, robot1, scene):
     """Executes the pick-and-place sequence for Robot 1 (Glassbot)."""
     print("\n" + "="*70)
     print(">>> ROBOT 1: PICKING UP GLASS <<<")
@@ -92,7 +92,7 @@ def run_robot1_sequence1(controller, robot1, scene):
     controller.animate_trajectory(robot1, robot1.q, np.zeros(6), steps=60)
 
 
-def run_robot2_sequence1(controller, robot2, scene):
+def run_sequence2(controller, robot2, scene):
     """Executes the drink pouring sequence for Robot 2 (DrinkBot)."""
     print("\n" + "="*70)
     print(">>> ROBOT 2: FETCHING AND POURING DRINK <<<")
@@ -129,7 +129,7 @@ def run_robot2_sequence1(controller, robot2, scene):
 
     # Step 5: Move to the final pouring position
     print("\n[R2] Moving to final pour position...")
-    pour_height = 0.5
+    pour_height = 0.35
     pour_pose = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"] @ SE3(-0.6, 0, scene.glass_height + pour_height) @ SE3.Rx(pi/2) @ SE3.Ry(pi/2)
     final_q, success = controller.find_ikine(robot2, pour_pose, initial_q_guess=robot2.q)
 
@@ -223,7 +223,7 @@ def run_robot2_sequence1(controller, robot2, scene):
     controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["HOME"], steps=60)
     controller.print_pose(robot2, "R2 in safe home position")
 
-def run_robot3_sequence1(controller, robot3, robot2, scene):
+def run_sequence3(controller, robot3, robot2, scene):
     """Executes the ingredient adding sequence for Robot 3 (IngredientBot)."""
     print("\n" + "="*70)
     print(">>> ROBOT 3: ADDING INGREDIENT <<<")
@@ -237,7 +237,6 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     X_GLASS, Y_GLASS, Z_GLASS = -1.0, -0.575, 1.2
     VERTICAL_ORIENTATION = SE3.Rx(pi)
     X_UR3_MAT, Y_UR3_MAT, Z_UR3_MAT = 0, 0.55, 1 #0.62
-
 
     # Target Objects & Poses
     cube_target = scene.cube_objects[CUBE_INDEX]
@@ -325,7 +324,6 @@ def run_robot3_sequence1(controller, robot3, robot2, scene):
     print(f"Robot q after turning: {np.rad2deg(spin_q_r2)}")
     controller.animate_trajectory(robot2, robot2.q, spin_q_r2, steps=60)
     controller.print_pose(robot2, "R2 Finished Rotating")
-
 
     # Step 11: Refine hover position with glass
     print("\n[R1] bringing glass to correct hover position...")
