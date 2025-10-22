@@ -214,7 +214,7 @@ def run_gui_mode():
         gui.run()
     
     except ImportError:
-        print("\n❌ GUI module not found. Please ensure gui.py is available.")
+        print("\n GUI module not found. Please ensure gui.py is available.")
         print("Falling back to terminal mode...\n")
         run_terminal_mode()
 

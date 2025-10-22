@@ -250,7 +250,7 @@ class RobotBartenderGUI:
     
     def _on_initialization_complete(self):
         """Called when system initialization completes"""
-        self._log("✅ System initialization complete!")
+        self._log(" System initialization complete!")
         
         # Populate robot dropdown
         robot_names = list(self.robots.keys())
@@ -269,7 +269,7 @@ class RobotBartenderGUI:
     
     def _on_initialization_error(self, error_msg):
         """Called if initialization fails"""
-        self._log(f"❌ Initialization failed: {error_msg}")
+        self._log(f" Initialization failed: {error_msg}")
         messagebox.showerror("Initialization Error", f"Failed to initialize system:\n{error_msg}")
     
     # ========================================================================
@@ -286,7 +286,7 @@ class RobotBartenderGUI:
                 daemon=True
             )
             self.worker_thread.start()
-            self._log("🚀 Starting sequence...")
+            self._log(" Starting sequence...")
         
         # Set state to RUNNING
         self.system_state.set_state(RobotState.RUNNING)
@@ -295,7 +295,7 @@ class RobotBartenderGUI:
     def _on_estop(self):
         """E-STOP button callback"""
         self.system_state.set_state(RobotState.ESTOP_ACTIVE)
-        self._log("🛑 EMERGENCY STOP ACTIVATED!")
+        self._log(" EMERGENCY STOP ACTIVATED!")
         messagebox.showwarning("E-STOP", "Emergency Stop Activated!\nAll motion halted.")
     
     def _on_disarm(self):
@@ -307,13 +307,13 @@ class RobotBartenderGUI:
     def _on_resume(self):
         """Resume button callback"""
         self.system_state.set_state(RobotState.RUNNING)
-        self._log(f"▶️  Resuming from: {self.progress.get_status()}")
+        self._log(f"  Resuming from: {self.progress.get_status()}")
     
     def _on_clear_progress(self):
         """Clear progress button callback"""
         if messagebox.askyesno("Clear Progress", "Reset sequence progress to start?"):
             self.progress.reset()
-            self._log("🔄 Progress cleared - will restart from beginning")
+            self._log(" Progress cleared - will restart from beginning")
     
     def _on_jog(self, direction):
         """Jog button callback"""
