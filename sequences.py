@@ -344,11 +344,3 @@ def run_sequence3(controller, robot3, robot2, scene):
     #Step 13: Return to Home Position
     controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["HOME"], steps=60)
     controller.print_pose(robot2, "R2 in safe home position")
-
-
-
-
-
-
-
-
