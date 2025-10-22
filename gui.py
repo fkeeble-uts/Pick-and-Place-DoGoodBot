@@ -10,6 +10,7 @@ import threading
 import time
 from SystemState import SystemState, RobotState, SequenceProgress
 from main import setup_robot_system, run_sequence_worker
+import keyboard
 
 
 class RobotBartenderGUI:
@@ -263,6 +264,8 @@ class RobotBartenderGUI:
         
         # Start GUI update loop
         self._update_gui()
+
+        self._start_keyboard_listener()
     
     def _on_initialization_error(self, error_msg):
         """Called if initialization fails"""
@@ -297,8 +300,9 @@ class RobotBartenderGUI:
     
     def _on_disarm(self):
         """Disarm E-STOP button callback"""
-        self.system_state.set_state(RobotState.PAUSED)
-        self._log("E-STOP disarmed - system PAUSED")
+        self.progress.reset()
+        self.system_state.set_state(RobotState.TEACH)
+        self._log("E-STOP disarmed - system reset")
     
     def _on_resume(self):
         """Resume button callback"""
@@ -431,6 +435,37 @@ class RobotBartenderGUI:
         
         # Schedule next update
         self.root.after(self.update_interval, self._update_gui)
+
+
+    # ========================================================================
+    # KEYBOARD LISTENER
+    # ========================================================================
+    
+    def _start_keyboard_listener(self):
+        """Starts a thread to listen for the 'E' keypress for E-STOP."""
+        
+        def listener_worker():
+            # The keyboard.wait() function is blocking, so it must run in a thread.
+            # It blocks the execution until the specified key is pressed.
+            self._log("Terminal E-STOP listener active. Press 'e' to trigger.")
+            while self.system_state.state != RobotState.QUIT:
+                try:
+                    # Wait for the 'e' key to be pressed
+                    keyboard.wait('e') 
+                    
+                    # Ensure the E-STOP is not already active
+                    if self.system_state.state != RobotState.ESTOP_ACTIVE:
+                        # Use root.after to safely call the GUI method from the thread
+                        self.root.after(0, self._on_estop)
+                    
+                    # Wait a moment after trigger to avoid rapid-fire events
+                    time.sleep(0.5) 
+                except Exception as e:
+                    print(f"Keyboard listener error: {e}")
+                    break # Exit listener on error or QUIT state
+
+        # Start the listener in a separate thread
+        threading.Thread(target=listener_worker, daemon=True).start()
     
     # ========================================================================
     # LOGGING

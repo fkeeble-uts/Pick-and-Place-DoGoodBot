@@ -23,7 +23,7 @@ R2_GUESSES = {
     "POUR_HOVER": np.deg2rad(np.array([-0.55, 133.68, -32.24, -0.57, 104.09, -89.86])),
     "GLASS_HOVER": np.deg2rad(np.array([-180, 15, 112, 0, 94, 0])),
     "GLASS_DROP_HOVER": np.deg2rad(np.array([0.49, 19.42, 128.59, 0.0, 109.17, -179.51])),
-    "GLASS_HANDOVER_PICKUP": np.deg2rad(np.array([0, 138.77, -16.77, -0.0, -155.53, -90.43])),
+    "GLASS_HANDOVER_PICKUP": np.deg2rad(np.array([-180, 138.77, -16.77, -0.0, -155.53, -90.43])),
     "GLASS_HANDOVER_HOVER" : np.deg2rad(np.array([89.57, 128.63, -16.52, 0.0, -145.15, -90.43]))
 }
 
@@ -56,12 +56,12 @@ def check_halt(success, robot_name, progress: SequenceProgress,
         True if sequence should halt, False to continue
     """
     if not success:
-        # progress.set_checkpoint(sequence_id, checkpoint_num)
+        progress.set_checkpoint(sequence_id, checkpoint_num)
         print(f" 🔴 HALTED at {robot_name} checkpoint {checkpoint_num}")
         return True
     
     # Success - simply continue, no checkpoint update
-    # progress.set_checkpoint(sequence_id, checkpoint_num + 1)
+    progress.set_checkpoint(sequence_id, checkpoint_num + 1)
     return False
 
 

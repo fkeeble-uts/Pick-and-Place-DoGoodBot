@@ -104,10 +104,10 @@ def run_sequence_worker(controller, robots, scene, system_state, progress):
                     if system_state.state != RobotState.RUNNING:
                         continue
 
-                #if progress.current_sequence in [None, 'R1', 'R2', 'R3', 'R4']:
-                #    sequences.run_robot4_sequence(controller, robot4, scene, progress)
-                #    if system_state.state != RobotState.RUNNING:
-                #        continue
+                if progress.current_sequence in [None, 'R1', 'R2', 'R3', 'R4']:
+                    sequences.run_robot4_sequence(controller, robot4, scene, progress)
+                    if system_state.state != RobotState.RUNNING:
+                        continue
                                     
                 # All sequences complete
                 if system_state.state == RobotState.RUNNING:
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         mode = sys.argv[1].lower()
     else:
-        mode = "terminal"  # Default to GUI mode
+        mode = "gui"  # Default to GUI mode
     
     # Run appropriate mode
     if mode == "terminal" or mode == "test":
