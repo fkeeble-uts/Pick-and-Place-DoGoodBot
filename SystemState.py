@@ -87,7 +87,7 @@ class SequenceProgress:
             
             # If checking a different sequence
             if self.current_sequence != sequence_id:
-                seq_order = {'R1': 0, 'R2': 1, 'R3': 2}
+                seq_order = {'R1': 0, 'R2': 1, 'R3': 2, 'R4': 3}
                 current_order = seq_order.get(self.current_sequence, -1)
                 check_order = seq_order.get(sequence_id, -1)
                 
