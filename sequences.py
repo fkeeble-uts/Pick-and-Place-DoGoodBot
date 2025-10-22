@@ -69,7 +69,7 @@ def check_halt(success, robot_name, progress: SequenceProgress,
 # ROBOT 1: GLASS PICKUP AND PLACEMENT
 # ============================================================================
 
-def run_robot1_sequence(controller, robot1, scene, progress: SequenceProgress):
+def run_robot1_sequence(controller, robot1, robot2, robot3, robot4, scene, progress: SequenceProgress):
     """
     Robot 1 (GlassBot): Pick up glass and place on workstation.
     Resumable with checkpoints.
@@ -82,10 +82,21 @@ def run_robot1_sequence(controller, robot1, scene, progress: SequenceProgress):
     glass_index = 3
     target_glass = scene.glass_objects[glass_index]
     
-    # Initialize if starting fresh
-    if progress.current_sequence is None:
-        robot1.q = R1_GUESSES["HOME"]
-        controller.print_pose(robot1, "R1 at HOME")
+    # ------------------------------------------------------------------------
+    # HOMING (Ensures clean start from TEACH mode)
+    # ------------------------------------------------------------------------
+        
+    # Use the predefined R1_GUESSES["HOME"] for consistency
+    R1_Q_HOME = R1_GUESSES["HOME"] 
+    _success, _ = controller.animate_trajectory(robot1, robot1.q, R1_Q_HOME, steps=60)
+    R2_Q_HOME = R2_GUESSES["HOME"] 
+    _success, _ = controller.animate_trajectory(robot2, robot1.q, R2_Q_HOME, steps=60)
+    R3_Q_HOME = R3_GUESSES["HOME"] 
+    _success, _ = controller.animate_trajectory(robot3, robot1.q, R3_Q_HOME, steps=60)
+    #R4_Q_HOME = R1_GUESSES["HOME"] 
+    #_success, _ = controller.animate_trajectory(robot1, robot1.q, R1_Q_HOME, steps=60)
+        
+    if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 0): return
     
     # CHECKPOINT 1: Hover above glass
     print("\n[R1] Moving to hover above glass...")
@@ -134,6 +145,7 @@ def run_robot1_sequence(controller, robot1, scene, progress: SequenceProgress):
     _success, _ = controller.move_rmrc(robot1, r1_target, 50)
     if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 5): return
     controller.drop_object(robot1)
+
     
     # CHECKPOINT 6: Retract
     print("\n[R1] Retracting...")
@@ -145,6 +157,8 @@ def run_robot1_sequence(controller, robot1, scene, progress: SequenceProgress):
     print("\n[R1] Returning home...")
     _success, _ = controller.animate_trajectory(robot1, robot1.q, np.zeros(6), steps=60)
     if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 7): return
+
+    
     
     print("✅ Robot 1 sequence complete!")
 

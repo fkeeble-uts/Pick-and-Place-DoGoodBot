@@ -90,7 +90,7 @@ def run_sequence_worker(controller, robots, scene, system_state, progress):
                 
                 # Execute sequences based on progress
                 if progress.current_sequence in [None, 'R1']:
-                    sequences.run_robot1_sequence(controller, robot1, scene, progress)
+                    sequences.run_robot1_sequence(controller, robot1, robot2, robot3, robot4, scene, progress)
                     if system_state.state != RobotState.RUNNING:
                         continue
                 
