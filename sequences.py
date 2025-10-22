@@ -57,7 +57,7 @@ def run_sequence1(controller, robot1, scene):
     # Step 2: Move down to the grasping position
     print("\n[R1] Moving to grasp position...")
     target_grasp_pose = scene.glass_poses[glass_index] @ SE3.Tz(scene.glass_height / 2) @ SE3.Ry(pi)
-    controller.move_cartesian(robot1, robot1.q, target_grasp_pose, 50)
+    controller.move_rmrc(robot1, robot1.q, target_grasp_pose, 50)
     controller.print_pose(robot1, "R1 at Grasp Position")
     
     # Step 3: Pick up the object
@@ -66,7 +66,7 @@ def run_sequence1(controller, robot1, scene):
     # Step 4: Lift the glass vertically
     print("\n[R1] Lifting glass...")
     lift_pose = robot1.fkine(robot1.q) @ SE3.Tz(-0.15)
-    controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
+    controller.move_rmrc(robot1, robot1.q, lift_pose, 50)
     controller.print_pose(robot1, "R1 Lifted Glass")
 
     # Step 5: Hover the glass over the workstation
@@ -81,13 +81,13 @@ def run_sequence1(controller, robot1, scene):
     controller.print_pose(robot1, "R1 at hover before placing glass")
 
     # Step 6: Drop the glass
-    controller.move_cartesian(robot1, robot1.q, r1_target, 50)
+    controller.move_rmrc(robot1, robot1.q, r1_target, 50)
     controller.drop_object(robot1)
 
     # Step 7: Move glassbot back to home position
     print("\n[R1] raising EE up...")
     lift_pose = robot1.fkine(robot1.q) @ SE3.Tz(-0.25)
-    controller.move_cartesian(robot1, robot1.q, lift_pose, 50)
+    controller.move_rmrc(robot1, robot1.q, lift_pose, 50)
     controller.print_pose(robot1, "R1 Lifted EE")
     controller.animate_trajectory(robot1, robot1.q, np.zeros(6), steps=60)
 
@@ -110,7 +110,7 @@ def run_sequence2(controller, robot2, scene):
         return
     controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
     controller.print_pose(robot2, "R2 Hovering in front of glass")
-    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, target_r2_pose, 50)
     controller.print_pose(robot2, "R2 Gripping glass")
 
     # Step 2: Pick up the drink
@@ -119,7 +119,7 @@ def run_sequence2(controller, robot2, scene):
     # Step 3: Retract from the wall
     print("\n[R2] Retracting from shelf...")
     retract_pose = robot2.fkine(robot2.q) @ SE3.Tz(-0.2)
-    controller.move_cartesian(robot2, robot2.q, retract_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, retract_pose, 50)
     controller.print_pose(robot2, "R2 Retracted")
 
     # Step 4: Move to an intermediate position
@@ -159,13 +159,13 @@ def run_sequence2(controller, robot2, scene):
     # Step 8: Return the drink
     print("\n[R2] Returning drink to shelf...")
     controller.animate_trajectory(robot2, robot2.q, hover_q_r2, steps=60)
-    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, target_r2_pose, 50)
     controller.drop_object(robot2)
 
     # Step 9: Retract back from the wall
     print("\n[R2] Retracting from shelf...")
     retract_pose = robot2.fkine(robot2.q) @ SE3.Tz(-0.2)
-    controller.move_cartesian(robot2, robot2.q, retract_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, retract_pose, 50)
     controller.print_pose(robot2, "R2 Retracted")
 
     # Step 10: Swing back to above glass
@@ -188,7 +188,7 @@ def run_sequence2(controller, robot2, scene):
 
     # Step 11: Move down to glass
     print("\n[R2] Moving down to glass...")
-    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, target_r2_pose, 50)
     glass_index = 3
     target_glass = scene.glass_objects[glass_index]
     controller.pickup_object(robot2, target_glass)
@@ -196,7 +196,7 @@ def run_sequence2(controller, robot2, scene):
     # Step 11: Move up with glass
     print("\n[R2] Moving up with glass...")
     target_r2_pose = target_r2_pose @ SE3.Tz(-0.2)
-    controller.move_cartesian(robot2, robot2.q, target_r2_pose, 50)
+    controller.move_rmrc(robot2, robot2.q, target_r2_pose, 50)
 
     # Step 12: Swing around to hover glass over table
     print("\n[R2] Swinging around with glass...")
@@ -215,7 +215,7 @@ def run_sequence2(controller, robot2, scene):
     controller.print_pose(robot2, "R2 at hover before placing glass down")
 
     # Step 14: Place glass down
-    controller.move_cartesian(robot2, robot2.q, r2_target, 50)
+    controller.move_rmrc(robot2, robot2.q, r2_target, 50)
     controller.drop_object(robot2)
     controller.print_pose(robot2, "R2 after placing glass down")
 
@@ -263,7 +263,7 @@ def run_sequence3(controller, robot3, robot2, scene):
     # Step 3: Retract back to Hover Pose
     print("\n[R3] Retracting to hover...")
     HOVER_R3 = robot3.fkine(robot3.q) @ SE3.Tz(-0.3)
-    controller.move_cartesian(robot3, robot3.q, HOVER_R3, 80)
+    controller.move_rmrc(robot3, robot3.q, HOVER_R3, 80)
     controller.print_pose(robot3, "R3 Retracted")
 
     # Step 4: Swing aroud to drop ingredients 
@@ -312,7 +312,7 @@ def run_sequence3(controller, robot3, robot2, scene):
     
     print("\n[R3] Retracting for handover...")
     HOVER_R2 = robot2.fkine(robot2.q) @ SE3.Tz(-0.3)
-    controller.move_cartesian(robot2, robot2.q, HOVER_R2, 80)
+    controller.move_rmrc(robot2, robot2.q, HOVER_R2, 80)
     controller.print_pose(robot2, "R2 Retracted")
     
 
@@ -337,7 +337,7 @@ def run_sequence3(controller, robot3, robot2, scene):
     controller.print_pose(robot2, "R2 at hover before placing glass down")
 
     # Step 12: Place glass down
-    controller.move_cartesian(robot2, robot2.q, r2_target_final, 50)
+    controller.move_rmrc(robot2, robot2.q, r2_target_final, 50)
     controller.drop_object(robot2)
     controller.print_pose(robot2, "R2 after placing glass down")
 
