@@ -41,8 +41,8 @@ robot4.q = np.array([0,-pi/2,0,0,0,0])
 robot4.add_to_env(env)
 
 # Run sequences
-# seq.run_robot1_sequence1(controller, robot1, scene)
-seq.run_robot2_sequence1(controller, robot2, scene)
-seq.run_robot3_sequence1(controller, robot3, robot2, scene)
+seq.run_sequence1(controller, robot1, scene)
+seq.run_sequence2(controller, robot2, scene)
+seq.run_sequence3(controller, robot3, robot2, scene)
 
 env.hold()
