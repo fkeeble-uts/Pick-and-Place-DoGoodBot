@@ -91,11 +91,11 @@ class Scene:
         self.control_desk_width  = 0.8
         self.control_desk_height = 1.0
         self.control_desk_center_x = 2.7
-        self.control_desk_center_y = self.table2_center_y
+        self.control_desk_center_y = self.table2_center_y + 1.5
 
         # Emergency stop button
         self.button_center_x = self.control_desk_center_x - 0.2
-        self.button_center_y = self.table2_center_y + self.control_desk_width / 2 - 0.1
+        self.button_center_y = (self.table2_center_y + self.control_desk_width / 2 - 0.1) + 1.5
         self.button_center_z = self.table2_height + self.BUTTON_BASE_HEIGHT / 2 -0.01
 
         # LED / colour parameters
@@ -140,9 +140,9 @@ class Scene:
         # ----------------------------------------------------
         # INITIAL ENVIRONMENT OBJECTS
         # ----------------------------------------------------
-        floor = Cuboid(scale=[6, 3.25, 0.02],
+        floor = Cuboid(scale=[6, 5, 0.02],
                        color=[0.25, 0.3, 0.35, 1],
-                       pose=SE3(0, -0.125, self.floor_height))
+                       pose=SE3(0, 00.75, self.floor_height))
         self.env.add(floor)
 
         # --- Walls ---
@@ -151,15 +151,21 @@ class Scene:
                            pose=SE3(0, -1.75, self.wall_height/2))
         self.env.add(back_wall)
 
-        left_wall = Cuboid(scale=[self.wall_thickness, 3.25, self.wall_height],
+        left_wall = Cuboid(scale=[self.wall_thickness, 5, self.wall_height],
                            color=[0.85, 0.85, 0.9, 1],
-                           pose=SE3(-3, -0.125, self.wall_height/2))
+                           pose=SE3(-3, 0.75, self.wall_height/2))
         self.env.add(left_wall)
 
-        right_wall = Cuboid(scale=[self.wall_thickness, 3.25, self.wall_height],
+        right_wall = Cuboid(scale=[self.wall_thickness, 5, self.wall_height],
                             color=[0.85, 0.85, 0.9, 1],
-                            pose=SE3(3, -0.125, self.wall_height/2))
+                            pose=SE3(3, 0.75, self.wall_height/2))
         self.env.add(right_wall)
+
+        front_wall = Cuboid (scale=[6, self.wall_thickness, self.wall_height],
+                            color=[0.85, 0.85, 0.9, 0.2],
+                            pose=SE3(0, 1.5, self.wall_height/2))
+        self.env.add(front_wall)
+
 
         # --- Tables ---
         tables = [

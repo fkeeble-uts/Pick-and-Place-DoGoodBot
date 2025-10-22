@@ -56,12 +56,12 @@ def check_halt(success, robot_name, progress: SequenceProgress,
         True if sequence should halt, False to continue
     """
     if not success:
-        # progress.set_checkpoint(sequence_id, checkpoint_num)
+        progress.set_checkpoint(sequence_id, checkpoint_num)
         print(f" 🔴 HALTED at {robot_name} checkpoint {checkpoint_num}")
         return True
     
     # Success - simply continue, no checkpoint update
-    # progress.set_checkpoint(sequence_id, checkpoint_num + 1)
+    progress.set_checkpoint(sequence_id, checkpoint_num + 1)
     return False
 
 
