@@ -134,7 +134,7 @@ class Scene:
             "R1_ICE_GLASS": SE3(1.6, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
             "R2_ALCOHOL":   SE3(0.0, float(self.table1_center_y), float(self.table1_height + self.floor_height)),
             "R3_MIXERS":    SE3(-1.6, float(self.table1_center_y), float(self.table1_height + self.floor_height )),
-            "R4_SERVER":    SE3(0, float(self.table2_center_y+ 0.3), float(self.table2_height + self.floor_height - 0.009)),
+            "R4_SERVER":    SE3(0, float(self.table2_center_y+ 0.2), float(self.table2_height + self.floor_height - 0.009)),
         }
 
         # ----------------------------------------------------

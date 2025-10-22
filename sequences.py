@@ -458,4 +458,67 @@ def run_robot3_sequence(controller, robot3, robot2, scene, progress: SequencePro
     _success, _ = controller.animate_trajectory(robot2, robot2.q, R2_GUESSES["HOME"], steps=60)
     if check_halt(_success, robot2.name, progress, SEQUENCE_ID, 11): return
     
-    print("✅ Complete sequence finished!")
+    print("✅ Sequence 3 finished!")
+
+def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
+    """
+    Robot 4 (ServeBot): Fetch drink, place in customer collection area
+    """
+    print("\n" + "="*70)
+    print(">>> ROBOT 4 (SERVEBOT): DRINK SERVING <<<")
+    print("="*70 + "\n")
+    
+    SEQUENCE_ID = 3
+    CUBE_INDEX = 8
+    cube_target = scene.cube_objects[CUBE_INDEX]
+
+    glass_index = 3
+    target_glass = scene.glass_objects[glass_index]
+    
+    # Step 1: R4 moves to finished glass
+    print("\n[R4] Moving to pick up completed glass...")
+    mat_c_x = scene.BAR_MAT_POSITIONS[2]["x"]
+    mat_c_y = scene.BAR_MAT_POSITIONS[2]["y"]
+    mat_c_z = scene.BAR_MAT_Z_POS
+    mat_c_pose = SE3(mat_c_x, mat_c_y, mat_c_z)
+
+    # Now calculate the handoff target relative to the mat pose
+    handoff_target = mat_c_pose @ SE3(0, 0, scene.glass_height + scene.BAR_MAT_THICKNESS*2) @ SE3.Ry(pi)
+    handoff_q, success = controller.find_ikine(robot4, handoff_target, robot4.q, "z", False, 0.5)
+    if not success:
+        print("❌ [R4] Failed to hover over finished glass")
+        return
+    
+    _success, _ = controller.animate_trajectory(robot4, robot4.q, handoff_q, steps=60)
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 6): return
+
+    _success, _ = controller.move_rmrc(robot4, handoff_target, 80)
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
+    
+    # Step 2: R4 picks up glass with ingredient
+    glass_index = 3
+    target_glass = scene.glass_objects[glass_index]
+    controller.attach_objects(target_glass, cube_target)
+    controller.pickup_object(robot4, target_glass)
+    
+    print("\n[R4] Lifting completed drink...")
+    lift_pose = robot4.fkine(robot4.q) @ SE3.Tz(-0.3)
+    _success, _ = controller.move_rmrc(robot4, lift_pose, 80)
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
+
+    # Step 3: Turn to customer collection area
+    target_pedestal = scene.ROBOT_BASE_POSES["R4_SERVER"] @ SE3.Tx(-0.5) @ SE3.Tz(scene.glass_height) @ SE3.Ry(pi)
+    
+    serve_q, success = controller.find_ikine(robot4, target_pedestal, robot4.q, "z", False, 0.5)
+    if not success:
+        print("❌ [R4] Failed to hover over delivery area")
+        return
+    
+    _success, _ = controller.animate_trajectory(robot4, robot4.q, serve_q, steps=60)
+    controller.print_pose(robot4, "Robot 4 hovering over collection point")
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 6): return
+
+    # Step 4: Place finished glass down on collection area
+    _success, _ = controller.move_rmrc(robot4, target_pedestal, 80)
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
+    
