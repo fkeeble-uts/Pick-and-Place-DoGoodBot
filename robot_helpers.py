@@ -95,22 +95,92 @@ class RobotController:
         logging.warning(f"Failed to find a valid IK solution after {num_attempts} attempts.")
         return robot.q, False
 
-    def move_cartesian(self, robot, start_q, target_pose, num_steps, ignore_rotation=False):
-        print(f"[{robot.name}] Following Cartesian path...")
-        start_pose = robot.fkine(start_q)
+    def move_rmrc(self, robot, target_pose, num_steps, delta_t=None, epsilon=0.1, lambda_max=0.1):
+        # Moves the robot to a target pose using Resolved Motion Rate Control
+
+        if delta_t is None:
+            delta_t = self.scene.SIM_STEP_TIME
+
+        print(f"[{robot.name}] Following RMRC path...")
+
+        # 1. Generate the Cartesian path using ctraj
+        start_pose = robot.fkine(robot.q)
         cartesian_path = rtb.ctraj(start_pose, target_pose, num_steps)
-        current_q = start_q.copy()
-        for i, next_pose in enumerate(cartesian_path):
-            q_step, solved = self.find_ikine(robot, next_pose, initial_q_guess=current_q, ignore_rotation=ignore_rotation)
-            if solved:
-                robot.q = q_step
-                current_q = q_step
-                self._update_carried_object_pose(robot)
-                self.env.step(self.scene.SIM_STEP_TIME)
-            else:
-                logging.warning(f"IK failed at step {i+1}/{num_steps} during Cartesian move. Halting motion.")
-                return robot.q
-        print(f"✓ Cartesian path complete.")
+
+        current_q = robot.q.copy()
+        qlim = robot.qlim # Get joint limits, transpose might not be needed depending on shape
+
+        # 2. RMRC Loop
+        for i in range(num_steps - 1):
+            T_current = robot.fkine(current_q)
+            T_desired = cartesian_path[i+1] # Target is the *next* pose in the path
+
+            # Calculate velocity required to reach the next pose in delta_t
+            delta_x = T_desired.t - T_current.t
+            linear_velocity = delta_x / delta_t
+
+            # Calculate angular velocity using the skew-symmetric matrix method
+            Rd = T_desired.R
+            Ra = T_current.R
+            Rdot = (1/delta_t)*(Rd - Ra)
+            S = Rdot @ Ra.T
+            # Ensure S is skew-symmetric (optional check, helps debugging)
+            # S = (S - S.T) / 2
+            angular_velocity = np.array([S[2, 1], S[0, 2], S[1, 0]])
+
+            # Desired end-effector velocity vector
+            x_dot = np.concatenate((linear_velocity, angular_velocity))
+
+            # Get Jacobian
+            J = robot.jacob0(current_q)
+
+            # Calculate manipulability and DLS damping factor
+            try:
+                m = np.sqrt(np.linalg.det(J @ J.T))
+                if m < epsilon:
+                    m_lambda = (1 - (m / epsilon)) * lambda_max
+                else:
+                    m_lambda = 0
+            except np.linalg.LinAlgError: # Handle cases where J@J.T might be singular
+                 print(f"Warning: Singularity detected (Jacobian determinant close to zero) at step {i+1}. Applying max damping.")
+                 m = 0
+                 m_lambda = lambda_max
+
+
+            # Calculate Damped Least Squares Jacobian Inverse
+            try:
+                # DLS formula: J^T * inv(J * J^T + lambda * I)
+                identity_matrix = np.eye(J.shape[0]) # 6x6 Identity
+                inv_term = np.linalg.inv(J @ J.T + m_lambda * identity_matrix)
+                inv_j = J.T @ inv_term
+            except np.linalg.LinAlgError:
+                print(f"Error: Could not compute inverse Jacobian at step {i+1}. Halting RMRC.")
+                logging.error(f"Failed to compute inverse Jacobian at RMRC step {i+1}.")
+                return robot.q # Return current state
+
+            # Calculate joint velocities
+            q_dot = inv_j @ x_dot
+
+            # Joint Limit Check
+            q_next = current_q + q_dot * delta_t
+            for j in range(robot.n):
+                if q_next[j] < qlim[0, j]:
+                    # Clip to limit and effectively stop motion for this joint
+                    q_next[j] = qlim[0, j]
+                    q_dot[j] = (q_next[j] - current_q[j]) / delta_t # Adjust q_dot based on clipping
+                    # print(f"Warning: Joint {j+1} hit lower limit at step {i+1}.")
+                elif q_next[j] > qlim[1, j]:
+                    q_next[j] = qlim[1, j]
+                    q_dot[j] = (q_next[j] - current_q[j]) / delta_t
+                    # print(f"Warning: Joint {j+1} hit upper limit at step {i+1}.")
+
+            # Update state
+            current_q = current_q + q_dot * delta_t # Recalculate q_next after potential clipping adjustment
+            robot.q = current_q
+            self._update_carried_object_pose(robot)
+            self.env.step(delta_t)
+
+        print(f"✓ RMRC path complete.")
         return robot.q
 
     def wrap_to_near(self, q_goal, q_ref):
