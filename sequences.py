@@ -57,7 +57,7 @@ def check_halt(success, robot_name, progress: SequenceProgress,
     """
     if not success:
         progress.set_checkpoint(sequence_id, checkpoint_num)
-        print(f" 🔴 HALTED at {robot_name} checkpoint {checkpoint_num}")
+        print(f" HALTED at {robot_name} checkpoint {checkpoint_num}")
         return True
     
     # Success - simply continue, no checkpoint update
@@ -483,7 +483,7 @@ def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
     mat_c_pose = SE3(mat_c_x, mat_c_y, mat_c_z)
 
     # Now calculate the handoff target relative to the mat pose
-    handoff_target = mat_c_pose @ SE3(0, 0, scene.glass_height + scene.BAR_MAT_THICKNESS*2) @ SE3.Ry(pi)
+    handoff_target = mat_c_pose @ SE3(0, 0.05, scene.glass_height) @ SE3.Ry(pi)
     handoff_q, success = controller.find_ikine(robot4, handoff_target, robot4.q, "z", False, 0.5)
     if not success:
         print("❌ [R4] Failed to hover over finished glass")
