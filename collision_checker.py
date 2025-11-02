@@ -1,4 +1,3 @@
-# collision_checker.py
 import numpy as np
 from itertools import combinations
 from spatialgeometry import Cuboid
@@ -105,30 +104,16 @@ class CollisionChecker:
         # create cuboid centered at point
         cub = Cuboid(scale=[sx, sy, sz], color=[float(c) for c in color], pose=SE3(float(point[0]), float(point[1]), float(point[2])))
 
-        # Use the socket send path (blocking) to register the shape with Swift.
-        # This mirrors the earlier behaviour where the call could block the UI
-        # but reliably caused the visible marker to appear in Swift.
         shape_dict = cub.to_dict()
 
         # blocking send to Swift
         self.env._send_socket("shape", [shape_dict])
 
-        # record locally so we can remove later
         self.collision_markers.append(cub)
 
         x, y, z = float(point[0]), float(point[1]), float(point[2])
-        print(f"Added collision marker at x={x:.3f}, y={y:.3f}, z={z:.3f}")
 
     def _clear_collision_markers(self):
-        """Remove previously added collision markers from the env (if any)."""
-        if self.env is None:
-            self.collision_markers = []
-            return
-        for m in list(self.collision_markers):
-            try:
-                self.env.remove(m)
-            except Exception:
-                pass
         self.collision_markers = []
 
 
