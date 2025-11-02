@@ -507,7 +507,7 @@ def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
     if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
 
     # Step 3: Turn to customer collection area
-    target_pedestal = scene.ROBOT_BASE_POSES["R4_SERVER"] @ SE3.Tx(-0.5) @ SE3.Tz(scene.glass_height) @ SE3.Ry(pi)
+    target_pedestal = scene.ROBOT_BASE_POSES["R4_SERVER"] @ SE3(-0.5, 0.1, scene.glass_height) @ SE3.Ry(pi)
     
     serve_q, success = controller.find_ikine(robot4, target_pedestal, robot4.q, "z", False, 0.5)
     if not success:
