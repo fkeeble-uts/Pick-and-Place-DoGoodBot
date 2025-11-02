@@ -33,7 +33,7 @@ class CollisionChecker:
             'original_obj': obj
         })
 
-    def check_collision_for_q(self, robot, q_matrix, return_all=False, debug=False):
+    def check_collision_for_q(self, robot, q_matrix, return_all=False):
         """
         Check collision for a robot at one or multiple joint states
         q_matrix: list or np.ndarray of joint configurations
@@ -66,7 +66,7 @@ class CollisionChecker:
                 p_start = tr_all_arr[i][:3, 3]
                 p_end = tr_all_arr[i + 1][:3, 3]
                 for prism in self.prisms:
-                    intersect_p = self._link_intersects_prism(p_start, p_end, prism, debug=debug)
+                    intersect_p = self._link_intersects_prism(p_start, p_end, prism)
                     if intersect_p is not None:
                         # record intersection (dedupe nearby points)
                         ip = np.asarray(intersect_p, dtype=float)
@@ -92,7 +92,7 @@ class CollisionChecker:
             return intersections
         return False
 
-    def _link_intersects_prism(self, start, end, prism, debug=False):
+    def _link_intersects_prism(self, start, end, prism):
         """
         Check if a line segment (link) intersects a rectangular prism
         """
