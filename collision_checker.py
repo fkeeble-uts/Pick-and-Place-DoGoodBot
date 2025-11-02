@@ -9,20 +9,16 @@ class CollisionChecker:
     def __init__(self, env=None, visualise=False):
         self.env = env
         self.visualise = visualise
-        self.prisms = []          # Holds RectangularPrism objects
-        self.collision_markers = []  # Optional spheres for visualization
-    # keep initialization minimal; collision uses center-line segments
-    # between successive joint transforms (legacy behavior).
+        self.prisms = []
+        self.collision_markers = []
 
     def add_scene_prisms(self, obj):
         """
         Convert a Cuboid from Swift into a RectangularPrism for collision detection
         """
-        if not isinstance(obj, Cuboid):
-            return
 
         lwh = obj.scale
-        transform = obj.T         # 4x4 numpy array
+        transform = obj.T
         center = transform[:3, 3] # x, y, z position
         prism = RectangularPrism(lwh[0], lwh[1], lwh[2], center=center)
         vertices, faces, face_normals = prism.get_data()
@@ -34,10 +30,8 @@ class CollisionChecker:
         })
 
     def check_collision_for_q(self, robot, q_matrix, return_all=False):
-        """
-        Check collision for a robot at one or multiple joint states
-        q_matrix: list or np.ndarray of joint configurations
-        """
+        # Checks the robot at a joint configuration for collisions
+
         q_matrix = [q_matrix]
 
         # Clear previous visual markers when visualising
@@ -48,19 +42,12 @@ class CollisionChecker:
 
         for q in q_matrix:
             tr_all = robot.fkine_all(q)
-            tr_all_arr = None
 
             A = np.asarray(tr_all.A)
 
-            # If A has shape (4,4,n) transpose to (n,4,4)
-            if A.ndim == 3 and A.shape[0] == 4 and A.shape[1] == 4:
-                tr_all_arr = np.transpose(A, (2, 0, 1))
-            elif A.ndim == 2 and A.shape == (4, 4):
-                tr_all_arr = A.reshape((1, 4, 4))
-            else:
-                tr_all_arr = np.asarray(A)
+            tr_all_arr = np.asarray(A)
 
-            # Go link by link (legacy behaviour: single segment between joint transforms)
+            # Go link by link
             n_transforms = tr_all_arr.shape[0]
             for i in range(n_transforms - 1):
                 p_start = tr_all_arr[i][:3, 3]
@@ -93,9 +80,8 @@ class CollisionChecker:
         return False
 
     def _link_intersects_prism(self, start, end, prism):
-        """
-        Check if a line segment (link) intersects a rectangular prism
-        """
+        # Checks if a line segment intersects a rectangular prism
+
         vertices = prism['vertices']
         faces = prism['faces']
         normals = prism['face_normals']
@@ -112,53 +98,8 @@ class CollisionChecker:
                     return np.asarray(intersect_p)
         return None
 
-    def _sample_link_segments(self, start, end, n_along=3, n_around=8, radius=0.05):
-        """Approximate a cylindrical/offset link by sampling multiple short
-        line segments around the center-line.
-
-        Returns a list of (start,end) pairs (each a 3-vector).
-        """
-        start = np.asarray(start, dtype=float)
-        end = np.asarray(end, dtype=float)
-        vec = end - start
-        length = np.linalg.norm(vec)
-        if length == 0:
-            return []
-        dir_unit = vec / length
-
-        # find two orthonormal vectors perpendicular to dir_unit
-        # pick arbitrary vector not parallel to dir_unit
-        arb = np.array([1.0, 0.0, 0.0])
-        if abs(np.dot(arb, dir_unit)) > 0.9:
-            arb = np.array([0.0, 1.0, 0.0])
-        u = np.cross(dir_unit, arb)
-        u = u / np.linalg.norm(u)
-        v = np.cross(dir_unit, u)
-        v = v / np.linalg.norm(v)
-
-        segs = []
-        # include center-line sampling as well
-        t_vals = np.linspace(0.0, 1.0, n_along)
-        for a in range(n_around):
-            theta = 2.0 * np.pi * (a / float(n_around))
-            offset = radius * (np.cos(theta) * u + np.sin(theta) * v)
-            pts = [start + dir_unit * (t * length) + offset for t in t_vals]
-            # build short segments between successive points
-            for k in range(len(pts) - 1):
-                segs.append((pts[k], pts[k + 1]))
-        # also add the pure centerline segments (no offset)
-        center_pts = [start + dir_unit * (t * length) for t in t_vals]
-        for k in range(len(center_pts) - 1):
-            segs.append((center_pts[k], center_pts[k + 1]))
-
-        return segs
-
     def _add_collision_marker(self, point, size=0.02, color=[1, 0, 0, 1]):
-
         # Adds a 3d marker to a collision point
-
-        if self.env is None:
-            return
 
         sx = sy = sz = float(size)
         # create cuboid centered at point
@@ -167,28 +108,16 @@ class CollisionChecker:
         # Use the socket send path (blocking) to register the shape with Swift.
         # This mirrors the earlier behaviour where the call could block the UI
         # but reliably caused the visible marker to appear in Swift.
-        try:
-            shape_dict = cub.to_dict()
+        shape_dict = cub.to_dict()
 
-            # blocking send to Swift; older Swift envs expect this
-            self.env._send_socket("shape", [shape_dict])
+        # blocking send to Swift
+        self.env._send_socket("shape", [shape_dict])
 
-            # record locally so we can remove later
-            self.collision_markers.append(cub)
-            try:
-                x, y, z = float(point[0]), float(point[1]), float(point[2])
-                print(f"Added collision marker at x={x:.3f}, y={y:.3f}, z={z:.3f}")
-            except Exception:
-                print("Added collision marker at (unknown coords)")
-        except Exception:
-            # If the blocking send fails, report but allow the exception to
-            # propagate so any Swift-side issues are visible to the caller.
-            try:
-                x, y, z = float(point[0]), float(point[1]), float(point[2])
-                print(f"(socket send failed) collision marker intended at x={x:.3f}, y={y:.3f}, z={z:.3f}")
-            except Exception:
-                print("(socket send failed) collision marker intended at (unknown coords)")
-            raise
+        # record locally so we can remove later
+        self.collision_markers.append(cub)
+
+        x, y, z = float(point[0]), float(point[1]), float(point[2])
+        print(f"Added collision marker at x={x:.3f}, y={y:.3f}, z={z:.3f}")
 
     def _clear_collision_markers(self):
         """Remove previously added collision markers from the env (if any)."""
@@ -204,29 +133,27 @@ class CollisionChecker:
 
 
 def is_intersection_point_inside_triangle(intersect_p, triangle_verts):
-    """
-    Check if a 3D point is inside a triangle using barycentric coordinates
-    """
+    # Check if a point lies within a triangle (from lab 5)
     u = triangle_verts[1, :] - triangle_verts[0, :]
     v = triangle_verts[2, :] - triangle_verts[0, :]
-    w = intersect_p - triangle_verts[0, :]
 
     uu = np.dot(u, u)
     uv = np.dot(u, v)
     vv = np.dot(v, v)
+
+    w = intersect_p - triangle_verts[0, :]
     wu = np.dot(w, u)
     wv = np.dot(w, v)
 
     D = uv * uv - uu * vv
-    if abs(D) < 1e-12:
-        return False
 
+    # Get and test parametric coords (s and t)
     s = (uv * wv - vv * wu) / D
+    if s < 0.0 or s > 1.0:  # intersect_p is outside Triangle
+        return 0
+
     t = (uv * wu - uu * wv) / D
-    eps = 1e-9
-    if s < -eps or s > 1.0 + eps:
-        return False
-    if t < -eps or (s + t) > 1.0 + eps:
+    if t < 0.0 or (s + t) > 1.0:  # intersect_p is outside Triangle
         return False
 
-    return True
+    return True  # intersect_p is in Triangle
