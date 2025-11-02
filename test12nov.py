@@ -44,7 +44,7 @@ def main():
         pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
 
         if pts:
-            print(f"{bot.name}: Collision detected (found {len(pts)} point(s))")
+            print(f"{bot.name}: Collision detected! (found {len(pts)} point(s))")
         else:
             print(f"{bot.name}: No collisions detected")
 
@@ -58,9 +58,9 @@ def main():
 
             coll = collision_checker.check_collision_for_q(robot, robot.q)
             if coll:
-                print(f"{robot.name}: ❌ COLLISION at q={np.round(np.rad2deg(robot.q),2)}")
+                print(f"{robot.name}: Collion detected at q={np.round(np.rad2deg(robot.q),2)}!")
             else:
-                print(f"{robot.name}: ✅ CLEAR at q={np.round(np.rad2deg(robot.q),2)}")
+                print(f"{robot.name}: No collisions detected at q={np.round(np.rad2deg(robot.q),2)}")
 
         for i in range(getattr(robot, 'n', len(robot.q))):
             qmin = np.rad2deg(robot.qlim[0, i]) if hasattr(robot, 'qlim') else -180
