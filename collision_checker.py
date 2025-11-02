@@ -33,18 +33,12 @@ class CollisionChecker:
             'original_obj': obj
         })
 
-    def check_collision_for_q(self, robot, q_matrix, return_all=False, debug=False):
+    def check_collision_for_q(self, robot, q_matrix, return_all=False):
         """
         Check collision for a robot at one or multiple joint states
         q_matrix: list or np.ndarray of joint configurations
         """
-        if not hasattr(robot, 'q'):
-            raise ValueError("Robot must have a .q attribute for current joint state")
-
-        # Use the robot's own fkine_all (DHRobot3D instances)
-
-        if np.ndim(q_matrix) == 1:
-            q_matrix = [q_matrix]
+        q_matrix = [q_matrix]
 
         # Clear previous visual markers when visualising
         if self.visualise:
@@ -55,45 +49,16 @@ class CollisionChecker:
         for q in q_matrix:
             tr_all = robot.fkine_all(q)
             tr_all_arr = None
-            # list of transforms
-            if isinstance(tr_all, list):
-                if len(tr_all) == 0:
-                    tr_all_arr = np.zeros((0, 4, 4))
-                else:
-                    first = tr_all[0]
-                    if hasattr(first, 'A'):
-                        tr_all_arr = np.array([T.A for T in tr_all])
-                    else:
-                        tr_all_arr = np.asarray(tr_all)
-            # single SE3-like object (spatialmath SE3 array)
-            elif hasattr(tr_all, 'A'):
-                A = np.asarray(tr_all.A)
-                # If A has shape (4,4,n) transpose to (n,4,4)
-                if A.ndim == 3 and A.shape[0] == 4 and A.shape[1] == 4:
-                    tr_all_arr = np.transpose(A, (2, 0, 1))
-                elif A.ndim == 2 and A.shape == (4, 4):
-                    tr_all_arr = A.reshape((1, 4, 4))
-                else:
-                    tr_all_arr = np.asarray(A)
-            else:
-                tr_all_arr = np.asarray(tr_all)
 
-            # Normalize shapes to (n,4,4)
-            if tr_all_arr.ndim == 1:
-                if tr_all_arr.size == 16:
-                    tr_all_arr = tr_all_arr.reshape((1, 4, 4))
-                else:
-                    raise ValueError(f"Unexpected fkine_all output (1D) of length {tr_all_arr.size}")
-            elif tr_all_arr.ndim == 2:
-                if tr_all_arr.shape == (4, 4):
-                    tr_all_arr = tr_all_arr.reshape((1, 4, 4))
-                elif tr_all_arr.shape[1] == 16:
-                    tr_all_arr = tr_all_arr.reshape((tr_all_arr.shape[0], 4, 4))
-                else:
-                    raise ValueError(f"Unexpected fkine_all 2D array shape {tr_all_arr.shape}")
-            elif tr_all_arr.ndim == 3:
-                if tr_all_arr.shape[1:] != (4, 4):
-                    raise ValueError(f"Unexpected fkine_all 3D array trailing shape {tr_all_arr.shape[1:]}")
+            A = np.asarray(tr_all.A)
+
+            # If A has shape (4,4,n) transpose to (n,4,4)
+            if A.ndim == 3 and A.shape[0] == 4 and A.shape[1] == 4:
+                tr_all_arr = np.transpose(A, (2, 0, 1))
+            elif A.ndim == 2 and A.shape == (4, 4):
+                tr_all_arr = A.reshape((1, 4, 4))
+            else:
+                tr_all_arr = np.asarray(A)
 
             # Go link by link (legacy behaviour: single segment between joint transforms)
             n_transforms = tr_all_arr.shape[0]
@@ -101,7 +66,7 @@ class CollisionChecker:
                 p_start = tr_all_arr[i][:3, 3]
                 p_end = tr_all_arr[i + 1][:3, 3]
                 for prism in self.prisms:
-                    intersect_p = self._link_intersects_prism(p_start, p_end, prism, debug=debug)
+                    intersect_p = self._link_intersects_prism(p_start, p_end, prism)
                     if intersect_p is not None:
                         # record intersection (dedupe nearby points)
                         ip = np.asarray(intersect_p, dtype=float)
@@ -127,7 +92,7 @@ class CollisionChecker:
             return intersections
         return False
 
-    def _link_intersects_prism(self, start, end, prism, debug=False):
+    def _link_intersects_prism(self, start, end, prism):
         """
         Check if a line segment (link) intersects a rectangular prism
         """
@@ -143,14 +108,6 @@ class CollisionChecker:
             triangle_list = np.array(list(combinations(face, 3)), dtype=int)
             for tri in triangle_list:
                 inside = is_intersection_point_inside_triangle(intersect_p, vertices[tri])
-                if debug:
-                    try:
-                        sp = np.asarray(start).tolist()
-                        ep = np.asarray(end).tolist()
-                        ip = np.asarray(intersect_p).tolist()
-                        print(f"DEBUG: link [{sp} -> {ep}] plane face #{j} tri {tri} intersect {ip} inside={inside}")
-                    except Exception:
-                        print(f"DEBUG: link intersection check face {j} tri {tri} inside={inside}")
                 if inside:
                     return np.asarray(intersect_p)
         return None
@@ -197,12 +154,9 @@ class CollisionChecker:
         return segs
 
     def _add_collision_marker(self, point, size=0.02, color=[1, 0, 0, 1]):
-        """Add a small red cube (Cuboid) at the given 3D point to the Swift env.
 
-        point: array-like (3,)
-        size: float cube edge length in meters
-        color: RGBA list
-        """
+        # Adds a 3d marker to a collision point
+
         if self.env is None:
             return
 
@@ -210,39 +164,14 @@ class CollisionChecker:
         # create cuboid centered at point
         cub = Cuboid(scale=[sx, sy, sz], color=[float(c) for c in color], pose=SE3(float(point[0]), float(point[1]), float(point[2])))
 
-        def _sanitize(obj):
-            """Recursively convert numpy types to native Python types for JSON serialization."""
-            if isinstance(obj, dict):
-                return {str(k): _sanitize(v) for k, v in obj.items()}
-            if isinstance(obj, (list, tuple)):
-                return [_sanitize(v) for v in obj]
-            # numpy scalars
-            try:
-                import numpy as _np
-                if isinstance(obj, _np.generic):
-                    py = obj.item()
-                    return _sanitize(py)
-                if isinstance(obj, _np.ndarray):
-                    return _sanitize(obj.tolist())
-            except Exception:
-                pass
-            # basic python types
-            if isinstance(obj, (int, float, str, bool)) or obj is None:
-                return obj
-            # fallback to string
-            try:
-                return float(obj)
-            except Exception:
-                return str(obj)
-
         # Use the socket send path (blocking) to register the shape with Swift.
         # This mirrors the earlier behaviour where the call could block the UI
         # but reliably caused the visible marker to appear in Swift.
         try:
             shape_dict = cub.to_dict()
-            sanitized = _sanitize(shape_dict)
+
             # blocking send to Swift; older Swift envs expect this
-            self.env._send_socket("shape", [sanitized])
+            self.env._send_socket("shape", [shape_dict])
 
             # record locally so we can remove later
             self.collision_markers.append(cub)

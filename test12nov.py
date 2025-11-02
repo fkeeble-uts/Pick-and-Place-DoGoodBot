@@ -19,7 +19,7 @@ def setup_collision_checker(env, scene):
         checker.add_prism_like_obstacle_from_swift(obj)
     return checker
 
-def check_collisions_with_debug(checker, robot, q, scene):
+def check_collisions(checker, robot, q, scene):
     """
     Check collisions per-static-object so we can print which object causes it.
     Returns True if any collision found.
@@ -116,12 +116,12 @@ def main():
     print("--- Collision Check at Home Positions ---")
     for bot in [drinkbot, ingredientbot, glassbot, serverbot]:
         # quick per-prism check (prints which object if collision found)
-        if check_collisions_with_debug(checker, bot, bot.q, scene):
+        if check_collisions(checker, bot, bot.q, scene):
             print(f"{bot.name}: ❌ COLLISION detected")
         else:
             # quick check reported CLEAR; run a full collision pass with debug
             try:
-                pts = checker.check_collision_for_q(bot, bot.q, return_all=True, debug=True)
+                pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
             except Exception as e:
                 print(f"{bot.name}: collision debug check error: {e}")
                 pts = None
