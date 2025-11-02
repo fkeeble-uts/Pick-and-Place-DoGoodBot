@@ -1,8 +1,3 @@
-"""
-test.py
-Uses the simplified CollisionChecker (no adapters). Adds robots + scene and checks collisions.
-"""
-
 import swift
 from collision_checker import CollisionChecker
 from EnvironmentSetuptest import Scene
@@ -23,85 +18,49 @@ def main():
     env = swift.Swift()
     env.launch(realtime=True)
 
-    scene = Scene(env)   # Scene populates env and scene.static_objects
+    scene = Scene(env)
     print("Scene configuration loaded.")
 
-    # instantiate robots
+    # Instantiate robots
     drinkbot = DrinkBot()
     ingredientbot = IngredientBot()
     glassbot = GlassBot()
     serverbot = ServerBot()
 
-    # optionally set robot base poses from scene if robots support .base
-    try:
-        glassbot.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]
-    except Exception:
-        pass
-    try:
-        drinkbot.base = scene.ROBOT_BASE_POSES["R2_ALCOHOL"]
-    except Exception:
-        pass
-    try:
-        ingredientbot.base = scene.ROBOT_BASE_POSES["R3_MIXERS"]
-    except Exception:
-        pass
-    try:
-        serverbot.base = scene.ROBOT_BASE_POSES["R4_SERVER"]
-    except Exception:
-        pass
+    glassbot.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]
+    drinkbot.base = scene.ROBOT_BASE_POSES["R2_ALCOHOL"]
+    ingredientbot.base = scene.ROBOT_BASE_POSES["R3_MIXERS"]
+    serverbot.base = scene.ROBOT_BASE_POSES["R4_SERVER"]
 
-    # optionally set home q
+    # Add robots to swift env
     for bot in [drinkbot, ingredientbot, glassbot, serverbot]:
-        if hasattr(bot, "home_q"):
-            try:
-                bot.q = bot.home_q
-            except Exception:
-                pass
+        bot.add_to_env(env)
 
-    # add robots to swift env (try .add_to_env, fallback to env.add)
-    for bot in [drinkbot, ingredientbot, glassbot, serverbot]:
-        try:
-            bot.add_to_env(env)
-        except Exception:
-            try:
-                env.add(bot)
-            except Exception:
-                print(f"Failed to add {getattr(bot, 'name', str(bot))} to env")
-
-    # Setup collision checker with static objects (tables, walls, etc.)
+    # Setup collision checker with scene objects (tables, walls, etc.)
     checker = setup_collision_checker(env, scene)
 
     print("--- Collision Check at Home Positions ---")
     for bot in [drinkbot, ingredientbot, glassbot, serverbot]:
-        try:
-            pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
-        except Exception as e:
-            print(f"{bot.name}: collision debug check error: {e}")
-            pts = None
+        pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
+
         if pts:
-            print(f"{bot.name}: ❌ COLLISION detected (found {len(pts)} point(s))")
+            print(f"{bot.name}: Collision detected (found {len(pts)} point(s))")
         else:
-            print(f"{bot.name}: ✅ CLEAR")
+            print(f"{bot.name}: No collisions detected")
 
     # Optional: create sliders to sweep joints interactively and re-check collisions
     def create_sliders_for_robot(robot, sim_env, collision_checker):
         sliders = []
         def slider_cb(value, joint_idx):
-            try:
-                new_q = robot.q.copy()
-                new_q[joint_idx] = np.deg2rad(float(value))
-                robot.q = new_q
-            except Exception:
-                return
+            new_q = robot.q.copy()
+            new_q[joint_idx] = np.deg2rad(float(value))
+            robot.q = new_q
 
-            try:
-                coll = collision_checker.check_collision_for_q(robot, robot.q)
-                if coll:
-                    print(f"{robot.name}: ❌ COLLISION at q={np.round(np.rad2deg(robot.q),2)}")
-                else:
-                    print(f"{robot.name}: ✅ CLEAR at q={np.round(np.rad2deg(robot.q),2)}")
-            except Exception as e:
-                print(f"Collision check error: {e}")
+            coll = collision_checker.check_collision_for_q(robot, robot.q)
+            if coll:
+                print(f"{robot.name}: ❌ COLLISION at q={np.round(np.rad2deg(robot.q),2)}")
+            else:
+                print(f"{robot.name}: ✅ CLEAR at q={np.round(np.rad2deg(robot.q),2)}")
 
         for i in range(getattr(robot, 'n', len(robot.q))):
             qmin = np.rad2deg(robot.qlim[0, i]) if hasattr(robot, 'qlim') else -180
@@ -123,15 +82,9 @@ def main():
             print("Exiting teach mode...")
 
         for s in sliders:
-            try:
-                sim_env.remove(s)
-            except Exception:
-                pass
+            sim_env.remove(s)
 
-    try:
-        choice = input("Enter robot to teach (1=DrinkBot,2=IngredientBot,3=GlassBot,4=ServerBot) or press Enter to skip: ")
-    except Exception:
-        choice = ''
+    choice = input("Enter robot to teach (1=DrinkBot,2=IngredientBot,3=GlassBot,4=ServerBot) or press Enter to skip: ")
     mapping = {'1': drinkbot, '2': ingredientbot, '3': glassbot, '4': serverbot}
     if choice in mapping:
         create_sliders_for_robot(mapping[choice], env, checker)
