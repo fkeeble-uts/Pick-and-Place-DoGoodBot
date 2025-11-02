@@ -2,7 +2,9 @@ import time
 import numpy as np
 from spatialmath import SE3
 from math import pi
-from SystemState import RobotState, SequenceProgress # Assuming SystemState is available
+from SystemState import RobotState, SequenceProgress 
+import roboticstoolbox as rtb
+
 
 # ============================================================================
 # JOINT CONFIGURATION GUESSES (for IK initialization)
@@ -242,11 +244,61 @@ def run_robot2_sequence(controller, robot2, scene, progress: SequenceProgress):
     
     # CHECKPOINT 6: Pour (rotate wrist)
     print("\n[R2] Pouring...")
+
+    # Setup pour motion
     pour_q = robot2.q.copy()
     pour_q[4] += np.deg2rad(115)
-    _success, _ = controller.animate_trajectory(robot2, robot2.q, pour_q, steps=60)
+
+    # Setup liquid - create ONE cylinder at max height, but position it hidden
+    glass_pose = SE3(1.1, -0.575, 1.12)
+    liquid_color = [0.6, 0.3, 0.1, 0.8]
+    from spatialgeometry import Cylinder
+
+    max_height = 0.12
+    liquid = Cylinder(radius=0.045, length=max_height, color=liquid_color,
+                    pose=SE3(glass_pose.t[0], glass_pose.t[1], glass_pose.t[2] - 0.5))  # Hidden below
+    controller.env.add(liquid)
+
+    # Generate trajectory
+    q_path = rtb.jtraj(robot2.q, pour_q, 60).q
+
+    # Do both at same time
+    print("[R2+LIQUID] Synchronized pour animation...")
+    pour_delay = 30  # Start pouring at step 30 (halfway through 60 steps)
+
+    for i, q in enumerate(q_path):
+        if controller._check_estop(robot2):
+            return
+        
+        # Move robot
+        robot2.q = q
+        controller._update_carried_object_pose(robot2)
+        
+        # Only start filling after bottle is tilted enough
+        if i >= pour_delay:
+            # Calculate fill progress (0 to 1) from delay point to end
+            fill_steps = 60 - pour_delay  # 30 steps of actual pouring
+            progress_ratio = (i - pour_delay + 1) / fill_steps
+            visible_height = max_height * progress_ratio
+            
+            # Position the cylinder so only visible_height shows above glass bottom
+            z_bottom = glass_pose.t[2] - scene.glass_height/2
+            z_center = z_bottom + visible_height/2
+            
+            liquid.T = SE3(glass_pose.t[0], glass_pose.t[1], z_center).A
+        
+        controller.env.step(scene.SIM_STEP_TIME)
+
+    # Stick liquid to glass
+    glass_index = 3
+    target_glass = scene.glass_objects[glass_index]
+    controller.attach_objects(target_glass, liquid)
+    print("✓ Pour complete with liquid")
+
+    _success = True
     if check_halt(_success, robot2.name, progress, SEQUENCE_ID, 6): return
     
+
     # CHECKPOINT 7: Un-pour (rotate back)
     print("\n[R2] Finishing pour...")
     unpour_q = robot2.q.copy()

@@ -33,7 +33,7 @@ class RobotBartenderGUI:
         # GUI state
         self.update_interval = 100  # ms
         self.control_mode = "joint"  # "joint" or "cartesian"
-        self.jog_mode = "step"  # "step" or "slider"
+        self.jog_mode = "slider"  # "step" or "slider"
         
         # Build GUI
         self._create_widgets()
@@ -450,8 +450,7 @@ class RobotBartenderGUI:
                 self.env.step(0.02) # Step the simulator
                 
         except Exception as e:
-            # print(f"Slider live move error: {e}") # Keep logging but don't stop the program
-            pass # Keep it quiet during fast dragging
+            pass 
     
     def _on_joint_step(self, joint_idx, step_entry, direction):
         """Handle joint step button press"""

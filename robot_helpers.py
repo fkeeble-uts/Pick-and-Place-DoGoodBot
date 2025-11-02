@@ -102,11 +102,7 @@ class RobotController:
             robot: Robot holding object
         """
         if self.carried_object is not None:
-            # Check if this robot is currently responsible for moving the carried object
-            # In the original working logic, this check was implicit.
-            # Here, we ensure the object is correctly registered to *this* robot if object_owner is used,
-            # but we allow the update if only carried_object is set (like in the original working script)
-            if self.object_owner.get(self.carried_object) == robot: 
+            #if self.object_owner.get(self.carried_object) == robot: 
                 T_world_tcp = robot.fkine(robot.q)
                 T_world_new_parent = T_world_tcp @ self.grasp_transform
                 self.carried_object.T = T_world_new_parent.A
@@ -403,3 +399,5 @@ class RobotController:
             print(f"  Requested: {step_size*1000:.1f}mm, Actual: {actual_distance:.1f}mm")
         
         return success, final_q
+    
+
