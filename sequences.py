@@ -57,7 +57,7 @@ def check_halt(success, robot_name, progress: SequenceProgress,
     """
     if not success:
         progress.set_checkpoint(sequence_id, checkpoint_num)
-        print(f" HALTED at {robot_name} checkpoint {checkpoint_num}")
+        print(f"  HALTED at {robot_name} checkpoint {checkpoint_num}")
         return True
     
     # Success - simply continue, no checkpoint update
@@ -86,17 +86,24 @@ def run_robot1_sequence(controller, robot1, robot2, robot3, robot4, scene, progr
     # HOMING (Ensures clean start from TEACH mode)
     # ------------------------------------------------------------------------
         
+    def same_position(q1, q2, tol=1e-3):
+        return all(abs(a - b) < tol for a, b in zip(q1, q2))
+
     # Use the predefined R1_GUESSES["HOME"] for consistency
-    R1_Q_HOME = R1_GUESSES["HOME"] 
-    _success, _ = controller.animate_trajectory(robot1, robot1.q, R1_Q_HOME, steps=60)
-    R2_Q_HOME = R2_GUESSES["HOME"] 
-    _success, _ = controller.animate_trajectory(robot2, robot1.q, R2_Q_HOME, steps=60)
-    R3_Q_HOME = R3_GUESSES["HOME"] 
-    _success, _ = controller.animate_trajectory(robot3, robot1.q, R3_Q_HOME, steps=60)
-    #R4_Q_HOME = R1_GUESSES["HOME"] 
-    #_success, _ = controller.animate_trajectory(robot1, robot1.q, R1_Q_HOME, steps=60)
-        
-    if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 0): return
+    R1_Q_HOME = R1_GUESSES["HOME"]
+    if not same_position(robot1.q, R1_Q_HOME):
+        _success, _ = controller.animate_trajectory(robot1, robot1.q, R1_Q_HOME, steps=60)
+        if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 0): return
+
+    R2_Q_HOME = R2_GUESSES["HOME"]
+    if not same_position(robot2.q, R2_Q_HOME):
+        _success, _ = controller.animate_trajectory(robot2, robot2.q, R2_Q_HOME, steps=60)
+        if check_halt(_success, robot2.name, progress, SEQUENCE_ID, 0): return
+
+    R3_Q_HOME = R3_GUESSES["HOME"]
+    if not same_position(robot3.q, R3_Q_HOME):
+            _success, _ = controller.animate_trajectory(robot3, robot3.q, R3_Q_HOME, steps=60)
+            if check_halt(_success, robot3.name, progress, SEQUENCE_ID, 0): return
     
     # CHECKPOINT 1: Hover above glass
     print("\n[R1] Moving to hover above glass...")
