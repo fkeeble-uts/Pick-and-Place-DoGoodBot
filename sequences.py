@@ -35,6 +35,11 @@ R3_GUESSES = {
     "DEPOSIT_INGREDIENTS": np.deg2rad(np.array([168.07, 32.05, 68.88, -10.93, 90.0, -101.93])),
 }
 
+R4_GUESSES = {
+    "HOME": np.deg2rad(np.array([0,-pi/2,0,0,0,0]))
+}
+
+
 
 # ============================================================================
 # CHECKPOINT HELPER (SIMPLIFIED FOR DEMO)
@@ -152,6 +157,8 @@ def run_robot1_sequence(controller, robot1, robot2, robot3, robot4, scene, progr
     _success, _ = controller.move_rmrc(robot1, r1_target, 50)
     if check_halt(_success, robot1.name, progress, SEQUENCE_ID, 5): return
     controller.drop_object(robot1)
+
+    scene.glass_objects[glass_index].T = SE3(1.1, -0.575, 1.12)
 
     
     # CHECKPOINT 6: Retract
@@ -497,11 +504,12 @@ def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
         return
     
     _success, _ = controller.animate_trajectory(robot4, robot4.q, handoff_q, steps=60)
-    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 6): return
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 12): return
 
     _success, _ = controller.move_rmrc(robot4, handoff_target, 80)
-    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
-    
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 13): return
+    controller.print_pose(robot4, "Robot 4 hovering over handover point")
+
     # Step 2: R4 picks up glass with ingredient
     glass_index = 3
     target_glass = scene.glass_objects[glass_index]
@@ -512,9 +520,11 @@ def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
     lift_pose = robot4.fkine(robot4.q) @ SE3.Tz(-0.3)
     _success, _ = controller.move_rmrc(robot4, lift_pose, 80)
     if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
+    controller.print_pose(robot4, "Robot 4 in lift pose")
+
 
     # Step 3: Turn to customer collection area
-    target_pedestal = scene.ROBOT_BASE_POSES["R4_SERVER"] @ SE3.Tx(-0.5) @ SE3.Tz(scene.glass_height) @ SE3.Ry(pi)
+    target_pedestal = scene.ROBOT_BASE_POSES["R4_SERVER"] @ SE3.Tx(-0.5) @ SE3.Ty(0.1) @ SE3.Tz(scene.glass_height) @ SE3.Ry(pi)
     
     serve_q, success = controller.find_ikine(robot4, target_pedestal, robot4.q, "z", False, 0.5)
     if not success:
@@ -523,9 +533,19 @@ def run_robot4_sequence(controller, robot4, scene, progress: SequenceProgress):
     
     _success, _ = controller.animate_trajectory(robot4, robot4.q, serve_q, steps=60)
     controller.print_pose(robot4, "Robot 4 hovering over collection point")
-    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 6): return
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 14): return
 
     # Step 4: Place finished glass down on collection area
     _success, _ = controller.move_rmrc(robot4, target_pedestal, 80)
-    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 7): return
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 15): return
+    controller.drop_object(robot4)
+    controller.print_pose(robot4, "Robot 4 placed glass")
+
+
+    # return home
+    success, _ = controller.animate_trajectory(robot4, robot4.q, R4_GUESSES["HOME"], steps=60)
+    if check_halt(_success, robot4.name, progress, SEQUENCE_ID, 16): return
+    controller.print_pose(robot4, "Robot 4 returned home")
+
+
     
