@@ -35,7 +35,7 @@ class DrinkBot(DHRobot3D):
         super().__init__(links, link3D_names, name='CRB15000', link3d_dir=link3d_path, qtest=qtest, qtest_transforms=qtest_transforms)
         
         qlim_deg = np.array([
-            [-360, -27, -85, -144, -180, -360],
+            [-360, -25, -85, -144, -180, -360],
             [360,  208,  240,  127,  270,  360]
         ])
         self.qlim = np.deg2rad(qlim_deg)
