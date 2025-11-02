@@ -10,14 +10,14 @@ class IngredientBot(DHRobot3D):
     def __init__(self):
         links = self._create_DH()
         link3D_names = dict(
-            link0='TM5_Basem', color0=(0.4, 0.45, 0.5, 1),
-            link1='TM5_Link1m', color1=(0.4, 0.45, 0.5, 1),
-            link2='TM5_Link2new', color2=(0.4, 0.45, 0.5, 1),
-            link3='TM5_Link3new', color3=(0.4, 0.45, 0.5, 1),
+            link0='TM5_Basem', color0=(0.1, 0.1, 0.15, 1),
+            link1='TM5_Link1m', color1=(0.8, 0.8, 0.8, 1),
+            link2='TM5_Link2new', color2=(0.8, 0.8, 0.8, 1),
+            link3='TM5_Link3new', color3=(0.8, 0.8, 0.8, 1),
             link4='TM5_Link4new', color4=(0.8, 0.8, 0.8, 1),
-            link5='TM5_Link5new', color5=(0.8, 0.8, 0.8, 1),
-            link6='TM5_EndEff', color6=(0.8, 0.8, 0.8, 1),
-            link7='TM5_EndEff', color7=(0.8, 0.8, 0.8, 1)
+            link5='TM5_Link5new', color5=(0.0, 0.6, 0.8, 1),
+            link6='TM5_EndEff', color6=(0.0, 0.6, 0.8, 1),
+            link7='TM5_EndEff', color7=(0.0, 0.6, 0.8, 1)
         )
         qtest = [0, 0, 0, 0, 0, 0]
         qtest_transforms = [

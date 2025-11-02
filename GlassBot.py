@@ -22,13 +22,13 @@ class GlassBot(DHRobot3D):
 
         # Mesh names
         link3D_names = dict(
-            link0='link0',
-            link1="link1",
-            link2="link2",
-            link3="link3",
-            link4="link4",
-            link5="link5",
-            link6="link6"
+            link0='link0', color0=(0.1, 0.1, 0.15, 1),
+            link1="link1", color1=(0.8, 0.8, 0.8, 1),
+            link2="link2", color2=(0.8, 0.8, 0.8, 1),
+            link3="link3", color3=(0.8, 0.8, 0.8, 1),
+            link4="link4", color4=(0.8, 0.8, 0.8, 1),
+            link5="link5", color5=(0.0, 0.6, 0.8, 1),
+            link6="link6", color6=(0.0, 0.6, 0.8, 1)
         )
 
         # Reference test joint config
