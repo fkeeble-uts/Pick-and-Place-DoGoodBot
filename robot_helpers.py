@@ -3,6 +3,8 @@ import roboticstoolbox as rtb
 import logging
 from math import pi
 from spatialmath import SE3
+from collision_checker import CollisionChecker
+from SystemState import SystemState, RobotState, SequenceProgress
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +23,11 @@ class RobotController:
         self.env = env
         self.scene = scene
         self.system_state = system_state
+
+        # Initialize collision checker
+        self.collision_checker = CollisionChecker(env=env, visualise=True)
+        for obj in getattr(scene, "static_objects", []):
+            self.collision_checker.add_scene_prisms(obj)
         
         # Object manipulation state (Reverted to the original working variables)
         self.carried_object = None
@@ -331,6 +338,13 @@ class RobotController:
             # Apply joint limits
             robot.q = np.clip(q_config, robot.qlim[0, :], robot.qlim[1, :])
             self._update_carried_object_pose(robot)
+            coll = self.collision_checker.check_collision_for_q(robot, robot.q)
+            if coll:
+                print(f"[{robot.name}] Collision detected! Activating E-STOP.")
+                self.system_state.set_state(RobotState.ESTOP_ACTIVE)
+                return False, robot.q
+            else:
+                print(f"{robot.name}: No collisions detected at q={np.round(np.rad2deg(robot.q),2)}")
             self.env.step(self.scene.SIM_STEP_TIME)
         
         print("✓ Trajectory complete")

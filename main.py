@@ -6,7 +6,7 @@ from robot_helpers import RobotController
 import sequences
 from math import pi
 import numpy as np
-
+from collision_checker import CollisionChecker
 
 def setup_robot_system(system_state):
   
@@ -59,7 +59,6 @@ def setup_robot_system(system_state):
     print("\n System initialization complete!\n")
     
     return env, scene, controller, robots
-
 
 def run_sequence_worker(controller, robots, scene, system_state, progress):
     """    

@@ -44,6 +44,8 @@ class Scene:
         self.wall_height = 2.5
         self.wall_thickness = 0.05
         self.floor_height = 0.01
+        self.beam_height = 0.05
+        self.num_beams = 5
 
         # Table 1 (large workstation table)
         self.table1_length = 4.0
@@ -161,10 +163,21 @@ class Scene:
                             pose=SE3(3, 0.75, self.wall_height/2))
         self.env.add(right_wall)
 
-        front_wall = Cuboid (scale=[6, self.wall_thickness, self.wall_height],
+        '''front_wall = Cuboid (scale=[6, self.wall_thickness, self.wall_height],
                             color=[0.85, 0.85, 0.9, 0.2],
                             pose=SE3(0, 1.5, self.wall_height/2))
-        self.env.add(front_wall)
+        self.env.add(front_wall)'''
+
+        spacing = (self.wall_height - self.beam_height) / (self.num_beams - 1) if self.num_beams > 1 else 0
+
+        for i in range(self.num_beams):
+            z_pos = self.beam_height / 2 + i * spacing
+            light_beam = Cuboid(
+                scale=[6, self.wall_thickness, self.beam_height],
+                color=[0.8, 0, 0, 0.5],
+                pose=SE3(0, 1.5, z_pos)
+            )
+            self.env.add(light_beam)
 
 
         # --- Tables ---
