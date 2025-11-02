@@ -12,14 +12,14 @@ class DrinkBot(DHRobot3D):
     def __init__(self):
         links = self._create_DH()
         link3D_names = dict(
-            link0='CRB15000_Joint0', color0=(0.4, 0.45, 0.5, 1),
-            link1='CRB15000_Joint1', color1=(0.4, 0.45, 0.5, 1),
-            link2='CRB15000_Joint2', color2=(0.4, 0.45, 0.5, 1),
-            link3='CRB15000_Joint3', color3=(0.4, 0.45, 0.5, 1),
+            link0='CRB15000_Joint0', color0=(0.1, 0.1, 0.15, 1),
+            link1='CRB15000_Joint1', color1=(0.8, 0.8, 0.8, 1),
+            link2='CRB15000_Joint2', color2=(0.8, 0.8, 0.8, 1),
+            link3='CRB15000_Joint3', color3=(0.8, 0.8, 0.8, 1),
             link4='CRB15000_Joint4', color4=(0.8, 0.8, 0.8, 1),
             link5='CRB15000_Joint5', color5=(0.8, 0.8, 0.8, 1),
-            link6='CRB15000_Joint6', color6=(0.8, 0.8, 0.8, 1),
-            link7='CRB15000_Joint6', color7=(0.8, 0.8, 0.8, 1)
+            link6='CRB15000_Joint6', color6=(0.0, 0.6, 0.8, 1),
+            link7='CRB15000_Joint6', color7=(0.0, 0.6, 0.8, 1)
         )
         qtest = [0, pi/2, 0, 0, pi, 0]
         qtest_transforms = [spb.transl(0, 0, 0),
