@@ -292,35 +292,6 @@ class RobotController:
         """Wrap joint angles to be near reference configuration"""
         return q_ref + (q_goal - q_ref + pi) % (2 * pi) - pi
 
-    def move_to_q(self, robot, q_target, steps=None, name=""):
-        """
-        Move to target joint configuration using joint trajectory (jtraj).
-        E-STOP functionality integrated.
-        
-        Returns:
-            tuple: (success, final_q)
-        """
-        if steps is None: steps = self.scene.TRAJ_STEPS
-        
-        q_start = robot.q.copy()
-        # Use the original working utility function
-        q_target = self.wrap_to_near(q_target, q_start)
-        
-        print(f"[{robot.name}] Moving to {name}...")
-        trajectory = rtb.jtraj(q_start, q_target, steps)
-        
-        for q in trajectory.q:
-            # E-STOP check
-            if self._check_estop(robot):
-                return False, robot.q
-            
-            robot.q = q
-            self._update_carried_object_pose(robot)
-            self.env.step(self.scene.SIM_STEP_TIME)
-            
-        print(f"✓ {name}")
-        return True, q_target
-
     def animate_trajectory(self, robot, start_q, end_q, steps):
         """
         Animate smooth joint-space trajectory with E-STOP checking.
