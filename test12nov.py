@@ -16,50 +16,8 @@ def setup_collision_checker(env, scene):
     checker = CollisionChecker(env=env, visualise=True)
     # Register all static cuboid-like objects (walls, tables, mats, bases, etc.)
     for obj in getattr(scene, "static_objects", []):
-        checker.add_prism_like_obstacle_from_swift(obj)
+        checker.add_scene_prisms(obj)
     return checker
-
-def check_collisions(checker, robot, q, scene):
-    """
-    Check collisions per-static-object so we can print which object causes it.
-    Returns True if any collision found.
-    """
-    collision_found = False
-    # iterate over each static object and perform a temporary check just against that object's prism
-    for prism_entry in checker.prisms:
-        # create a temporary checker with only this single prism
-        env_for_temp = checker.env
-        temp_checker = CollisionChecker(env=env_for_temp, visualise=False)
-        # copy single prism dict into temp_checker.prisms (it already contains vertices/faces)
-        temp_checker.prisms.append(prism_entry)
-
-        if temp_checker.check_collision_for_q(robot, q):
-            collision_found = True
-            obj = prism_entry.get("original_obj", None)
-            printed = False
-
-            # Try to print a usable pose/center for the offending object
-            if obj is not None:
-                # obj.T might be SE3 or ndarray
-                T = getattr(obj, "T", None)
-                if T is None:
-                    T = getattr(obj, "pose", None)
-                if T is not None:
-                    try:
-                        t = T.t if hasattr(T, "t") else None
-                        if t is None:
-                            Tarr = T.A if hasattr(T, "A") else np.asarray(T)
-                            t = Tarr[:3, 3]
-                        print(f"  -> {robot.name} COLLIDES with object at x={t[0]:.3f}, y={t[1]:.3f}, z={t[2]:.3f}")
-                        printed = True
-                    except Exception:
-                        printed = False
-
-            if not printed:
-                print(f"  -> {robot.name} COLLIDES with an unknown/static prism (no pose info)")
-
-            # still continue to enumerate other colliding objects (for debug)
-    return collision_found
 
 def main():
     env = swift.Swift()
@@ -115,20 +73,15 @@ def main():
 
     print("--- Collision Check at Home Positions ---")
     for bot in [drinkbot, ingredientbot, glassbot, serverbot]:
-        # quick per-prism check (prints which object if collision found)
-        if check_collisions(checker, bot, bot.q, scene):
-            print(f"{bot.name}: ❌ COLLISION detected")
+        try:
+            pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
+        except Exception as e:
+            print(f"{bot.name}: collision debug check error: {e}")
+            pts = None
+        if pts:
+            print(f"{bot.name}: ❌ COLLISION detected (found {len(pts)} point(s))")
         else:
-            # quick check reported CLEAR; run a full collision pass with debug
-            try:
-                pts = checker.check_collision_for_q(bot, bot.q, return_all=True)
-            except Exception as e:
-                print(f"{bot.name}: collision debug check error: {e}")
-                pts = None
-            if pts:
-                print(f"{bot.name}: ❌ COLLISION detected (found {len(pts)} point(s))")
-            else:
-                print(f"{bot.name}: ✅ CLEAR")
+            print(f"{bot.name}: ✅ CLEAR")
 
     # Optional: create sliders to sweep joints interactively and re-check collisions
     def create_sliders_for_robot(robot, sim_env, collision_checker):

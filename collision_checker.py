@@ -14,7 +14,7 @@ class CollisionChecker:
     # keep initialization minimal; collision uses center-line segments
     # between successive joint transforms (legacy behavior).
 
-    def add_prism_like_obstacle_from_swift(self, obj):
+    def add_scene_prisms(self, obj):
         """
         Convert a Cuboid from Swift into a RectangularPrism for collision detection
         """
