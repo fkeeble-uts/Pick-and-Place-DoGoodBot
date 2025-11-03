@@ -318,3 +318,90 @@ class Scene:
                     self.cube_objects.append(cube)
 
         print("Scene configuration loaded.")
+
+    def register_static_objects(self):
+        """
+        Registers all static objects (walls, floors, tables, bar mats, control desk)
+        for collision checking. This should be called *after* Swift and Tkinter GUI
+        have fully initialized.
+        """
+        self.static_objects = []
+        floor = Cuboid(scale=[6, 5, 0.02],
+                       color=[0.25, 0.3, 0.35, 1],
+                       pose=SE3(0, 00.75, self.floor_height))
+        self.static_objects.append(floor)
+
+        # --- Walls ---
+        back_wall = Cuboid(scale=[6, self.wall_thickness, self.wall_height],
+                           color=[0.85, 0.85, 0.9, 1],
+                           pose=SE3(0, -1.75, self.wall_height/2))
+        self.static_objects.append(back_wall)
+
+        left_wall = Cuboid(scale=[self.wall_thickness, 5, self.wall_height],
+                           color=[0.85, 0.85, 0.9, 1],
+                           pose=SE3(-3, 0.75, self.wall_height/2))
+        self.static_objects.append(left_wall)
+
+        right_wall = Cuboid(scale=[self.wall_thickness, 5, self.wall_height],
+                            color=[0.85, 0.85, 0.9, 1],
+                            pose=SE3(3, 0.75, self.wall_height/2))
+        self.static_objects.append(right_wall)
+
+        front_wall = Cuboid (scale=[6, self.wall_thickness, self.wall_height],
+                            color=[0.85, 0.85, 0.9, 0.2],
+                            pose=SE3(0, 1.5, self.wall_height/2))
+        self.static_objects.append(front_wall)
+
+
+        # --- Tables ---
+        tables = [
+            {"name": "Workstation", "length": self.table1_length, "width": self.table1_width, "height": self.table1_height, "center": SE3(0, self.table1_center_y, 0), "leds": False},
+            {"name": "UR3e Table", "length": self.table2_length, "width": self.table2_width, "height": self.table2_height, "center": SE3(0, self.table2_center_y, 0), "leds": True},
+            {"name": "Glass Table", "length": self.glass_table_length, "width": self.glass_table_width, "height": self.glass_table_height, "center": SE3(self.glass_table_center_x, self.glass_table_center_y, 0), "leds": True},
+            {"name": "Drinks Shelf", "length": self.table3_length, "width": self.table3_width, "height": self.table3_height, "center": SE3(0, self.table3_center_y, 0), "leds": False},
+            {"name": "Ingredients Table", "length": self.ingredients_table_length, "width": self.ingredients_table_width, "height": self.ingredients_table_height, "center": SE3(self.ingredients_table_center_x, self.ingredients_table_center_y, 0), "leds": True},
+            {"name": "Serving Pedestal Left", "length": self.pedestal_length, "width": self.pedestal_width, "height": self.pedestal_height,"center": SE3(-self.pedestal_x_offset, self.table2_center_y + self.pedestal_y_offset, 0), "leds": True},
+            {"name": "Serving Pedestal Right", "length": self.pedestal_length, "width": self.pedestal_width, "height": self.pedestal_height,"center": SE3(self.pedestal_x_offset, self.table2_center_y + self.pedestal_y_offset, 0), "leds": True},
+            {"name": "Control Desk", "length": self.control_desk_length, "width": self.control_desk_width, "height": self.control_desk_height, "center": SE3(self.control_desk_center_x, self.control_desk_center_y, 0), "leds": False},    
+        ]
+
+        for i, t in enumerate(tables):
+            cx, cy, cz = t["center"].t
+            h, l, w = t["height"], t["length"], t["width"]
+
+            base = Cuboid(scale=[l, w, h-0.05], color=self.base_color, pose=SE3(cx, cy, (h-0.05)/2))
+            self.static_objects.append(base)
+
+            top = Cuboid(scale=[l, w, 0.05], color=self.top_color, pose=SE3(cx, cy, h - 0.025))
+            self.static_objects.append(top)
+
+            glow_scale_x = l*1.05 if l <= self.table2_length else l
+            glow_scale_y = w*1.05 if l <= self.table2_length else w
+            glow = Cuboid(scale=[glow_scale_x, glow_scale_y, 0.02], color=self.top_glow_color, pose=SE3(cx, cy, h - 0.015))
+            self.static_objects.append(glow)
+
+            if t["leds"]:
+                led = Cuboid(scale=[l + self.led_margin*2, w + self.led_margin*2, self.led_height], color=self.led_color, pose=SE3(cx, cy, (self.led_height/2)+self.led_offset))
+                self.static_objects.append(led)
+                for j in range(1, self.num_wraps+1):
+                    wrap_z = self.led_height + (h - 0.05 - self.led_height) * self.wrap_spacing_factor * j
+                    wrap_ring = Cuboid(scale=[l + self.led_margin*2, w + self.led_margin*2, self.led_height], color=self.led_color, pose=SE3(cx, cy, wrap_z))
+                    self.static_objects.append(wrap_ring)
+
+        # --- Bar Mats ---
+        for mat_config in self.BAR_MAT_POSITIONS:
+            mat = Cuboid(
+                scale=[self.BAR_MAT_LENGTH_X, self.BAR_MAT_WIDTH_Y, self.BAR_MAT_THICKNESS],
+                color=self.BAR_MAT_COLOR,
+                pose=SE3(mat_config["x"], mat_config["y"], self.BAR_MAT_Z_POS)
+            )
+            self.static_objects.append(mat)
+
+        # --- Emergency stop button ---
+        stop_base = Cuboid(scale=[self.BUTTON_BASE_LENGTH, 
+                                  self.BUTTON_BASE_WIDTH, self.BUTTON_BASE_HEIGHT], 
+                                  color=self.button_base_color, 
+                                  pose=SE3(self.button_center_x, self.button_center_y, 
+                                           self.button_center_z + self.BUTTON_BASE_HEIGHT/2))
+        self.static_objects.append(stop_base)
+        print(f"[DEBUG] Registered {len(self.static_objects)} static collision objects.")

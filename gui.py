@@ -1,9 +1,3 @@
-"""
-gui.py
-GUI interface for robot bartender system.
-Provides manual control, sequence execution, and E-STOP functionality.
-"""
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -11,7 +5,9 @@ import time
 from SystemState import SystemState, RobotState, SequenceProgress
 from main import setup_robot_system, run_sequence_worker
 import keyboard
-
+from collision_checker import CollisionChecker
+from math import pi
+import numpy as np
 
 class RobotBartenderGUI:
     """Main GUI application for robot bartender control"""
@@ -19,7 +15,7 @@ class RobotBartenderGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Robot Bartender Control System")
-        self.root.geometry("1400x900")
+        self.root.geometry("700x450")
         
         # System components
         self.system_state = SystemState()
@@ -412,7 +408,7 @@ class RobotBartenderGUI:
         try:
             robot = self.robots[self.robot_var.get()]
             for i, slider in enumerate(self.joint_sliders):
-                angle_deg = robot.q[i] * (180.0 / 3.14159)
+                angle_deg = robot.q[i] * (180.0 / pi)
                 slider.set(angle_deg)
         except:
             pass
@@ -421,36 +417,65 @@ class RobotBartenderGUI:
         """
         Handle joint slider value change, immediately moving the robot
         to the target angle using the controller's motion command.
+        Includes detailed debug tracing.
         """
         if self.system_state.state != RobotState.TEACH:
-            # The slider command fires on drag, so we check the state here
+            self._log(f"[DEBUG] Ignored slider move (state={self.system_state.state})")
             return
 
         try:
             robot_name = self.robot_var.get()
             if not robot_name:
-                # If no robot is selected, don't try to move
+                self._log("[DEBUG] No robot selected")
                 return
 
             robot = self.robots[robot_name]
-            # Convert the slider value (degrees) to radians
-            target_angle_rad = float(value) * (3.14159 / 180.0)
-            
-            # Check limits 
-            if target_angle_rad < robot.qlim[0, joint_idx] or target_angle_rad > robot.qlim[1, joint_idx]:
-                return
-            
-            # Create the target joint vector (q)
+            target_angle_rad = float(value) * (pi / 180.0)
             target_q = robot.q.copy()
             target_q[joint_idx] = target_angle_rad
 
-            if self.controller:
-                robot.q = target_q # Directly set the joint angle
-                self.controller._update_carried_object_pose(robot) # Update visualization
-                self.env.step(0.02) # Step the simulator
-                
+            self._log(f"[DEBUG] Slider J{joint_idx+1} -> {float(value):.2f}° ({target_angle_rad:.3f} rad)")
+            self._log(f"[DEBUG] Current q: {np.round(np.rad2deg(robot.q), 2)}°")
+            self._log(f"[DEBUG] Target q:  {np.round(np.rad2deg(target_q), 2)}°")
+
+            # Check limits
+            qmin, qmax = robot.qlim[0, joint_idx], robot.qlim[1, joint_idx]
+            if target_angle_rad < qmin or target_angle_rad > qmax:
+                self._log(f"[DEBUG] Target angle out of limits: [{qmin:.3f}, {qmax:.3f}] rad")
+                return
+
+            if not self.controller:
+                self._log("[DEBUG] Controller missing - cannot move")
+                return
+
+            # Setup collision checker
+            checker = self.setup_collision_checker(self.env, self.scene)
+            num_objs = len(getattr(checker, 'scene_prisms', []))
+            self._log(f"[DEBUG] Collision checker created ({num_objs} static objects)")
+
+            # Run collision check
+            coll = checker.check_collision_for_q(robot, target_q)
+            self._log(f"[DEBUG] Collision check result: {coll}")
+
+            if coll:
+                self._log(f"⚠️ Collision for {robot.name} at q={np.round(np.rad2deg(target_q),2)}°")
+                print(f"{robot.name}: Collision detected at q={np.round(np.rad2deg(target_q),2)}°!")
+                return
+
+            # If everything okay, move robot
+            robot.q = target_q
+            self.controller._update_carried_object_pose(robot)
+            if self.env:
+                self.env.step(0.02)
+
+            self._log(f"[DEBUG] ✅ Updated robot state. J{joint_idx+1} now {float(value):.2f}°")
+
         except Exception as e:
-            pass 
+            self._log(f"[ERROR] Slider move failed: {e}")
+            import traceback
+            traceback.print_exc()
+
+
     
     def _on_joint_step(self, joint_idx, step_entry, direction):
         """Handle joint step button press"""
@@ -468,7 +493,7 @@ class RobotBartenderGUI:
             
             # Get step size
             step_deg = float(step_entry.get())
-            step_rad = step_deg * direction * (3.14159 / 180.0)
+            step_rad = step_deg * direction * (pi / 180.0)
             
             # Apply jog
             new_q = robot.q.copy()
@@ -482,14 +507,19 @@ class RobotBartenderGUI:
                 messagebox.showwarning("Limit", f"Joint {joint_idx+1} at upper limit")
                 return
             
-            # Apply new position
-            robot.q = new_q
-            if self.controller:
-                self.controller._update_carried_object_pose(robot)
-            if self.env:
-                self.env.step(0.02)
-            
-            self._log(f"Jogged {robot_name} J{joint_idx+1} by {step_deg*direction:.1f} deg")
+            # Check for collisions
+            checker = self.setup_collision_checker(self.env, self.scene)
+            coll = checker.check_collision_for_q(robot, new_q)
+            if coll:
+                print(f"{robot.name}: Collion detected at q={np.round(np.rad2deg(robot.q),2)}!")
+            else:
+                robot.q = new_q
+                if self.controller:
+                    self.controller._update_carried_object_pose(robot)
+                if self.env:
+                    self.env.step(0.02)
+                
+                self._log(f"Jogged {robot_name} J{joint_idx+1} by {step_deg*direction:.1f} deg")
             
         except ValueError:
             messagebox.showerror("Input Error", "Invalid step size")
@@ -526,6 +556,13 @@ class RobotBartenderGUI:
             
             if success:
                 self._log(f"Jogged {robot_name} {direction} by {step_mm:.1f}mm ({frame} frame)")
+
+                # Check for collisions
+                checker = self.setup_collision_checker(self.env, self.scene)
+                coll = checker.check_collision_for_q(robot, final_q)
+                if coll:
+                    print(f"{robot.name}: Collision detected at q={np.round(np.rad2deg(final_q),2)}!")
+                    return
             else:
                 self._log(f"Cartesian jog {direction} failed")
                 messagebox.showwarning("Jog Failed", "Cannot reach target position.\nTry smaller step or different configuration.")
@@ -542,26 +579,24 @@ class RobotBartenderGUI:
     # ========================================================================
     
     def _initialize_system(self):
-        """Initialize robot system in background"""
+        """Initialize robot system on the main thread (required for macOS GUI)"""
         self._log("Initializing robot system...")
-        
-        def init_worker():
-            try:
-                self.env, self.scene, self.controller, self.robots = setup_robot_system(
-                    self.system_state
-                )
-                
-                # Update GUI on main thread
-                self.root.after(0, self._on_initialization_complete)
-                
-            except Exception as ex:
-                error_msg = str(ex)
-                import traceback
-                error_trace = traceback.format_exc()
-                print(f"Initialization error:\n{error_trace}")
-                self.root.after(0, lambda msg=error_msg: self._on_initialization_error(msg))
-        
-        threading.Thread(target=init_worker, daemon=True).start()
+
+        try:
+            # Setup robot system on main thread
+            self.env, self.scene, self.controller, self.robots = setup_robot_system(
+                self.system_state
+            )
+
+            # Update GUI after initialization
+            self._on_initialization_complete()
+
+        except Exception as ex:
+            error_msg = str(ex)
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Initialization error:\n{error_trace}")
+            self._on_initialization_error(error_msg)
     
     def _on_initialization_complete(self):
         """Called when system initialization completes"""
@@ -585,6 +620,13 @@ class RobotBartenderGUI:
         """Called if initialization fails"""
         self._log(f"Initialization failed: {error_msg}")
         messagebox.showerror("Initialization Error", f"Failed to initialize system:\n{error_msg}")
+
+    def setup_collision_checker(self, env, scene):
+        checker = CollisionChecker(env=env, visualise=True)
+        # Register all static cuboid-like objects (walls, tables, mats, bases, etc.)
+        for obj in getattr(scene, "static_objects", []):
+            checker.add_scene_prisms(obj)
+        return checker
     
     # ========================================================================
     # BUTTON CALLBACKS
@@ -702,7 +744,7 @@ class RobotBartenderGUI:
             
             # Update joint value labels
             for i, label in enumerate(self.joint_value_labels):
-                angle_deg = robot.q[i] * (180.0 / 3.14159)
+                angle_deg = robot.q[i] * (180.0 / pi)
                 label['text'] = f"{angle_deg:7.2f}°"
             
             # Update TCP position

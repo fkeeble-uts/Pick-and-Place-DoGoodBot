@@ -24,6 +24,15 @@ def setup_robot_system(system_state):
     env = swift.Swift()
     env.launch(realtime=True)
     scene = Scene(env)
+
+    # Delayed registration to prevent GUI freeze
+    def delayed_registration():
+        time.sleep(0.5)  # give GUI a moment to start
+        scene.register_static_objects()
+        print("[DEBUG] Static objects registered after GUI launch.")
+
+    threading.Thread(target=delayed_registration, daemon=True).start()
+
     
     robot1 = GlassBot()
     robot1.base = scene.ROBOT_BASE_POSES["R1_ICE_GLASS"]

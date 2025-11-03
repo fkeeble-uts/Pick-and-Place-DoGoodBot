@@ -64,13 +64,13 @@ class CollisionChecker:
                         if keep:
                             intersections.append(ip)
 
-                        # Add a visual marker if requested and env is available
+                        '''# Add a visual marker if requested and env is available
                         if self.visualise and self.env is not None:
                             try:
                                 self._add_collision_marker(ip)
                             except Exception:
                                 # Don't let visualization errors stop collision detection
-                                pass
+                                pass'''
                         # If not returning all, stop at first intersection
                         if not return_all:
                             return True
